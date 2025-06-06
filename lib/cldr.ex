@@ -11,7 +11,6 @@ defmodule ValueFormatters.Cldr do
       Cldr.DateTime,
       Cldr.Time,
       Cldr.Date,
-      Cldr.List,
-      Cldr.Message
+      Cldr.List
     ]
 end
