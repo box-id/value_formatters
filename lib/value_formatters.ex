@@ -2,8 +2,6 @@ defmodule ValueFormatters do
   use OK.Pipe
   alias ValueFormatters.Cldr
 
-  require ValueFormatters.Cldr.Message
-
   @date_display_options [:none, :short, :medium, :long, :full]
   @time_display_options [:none, :short, :medium, :long, :full]
 
