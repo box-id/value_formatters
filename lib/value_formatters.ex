@@ -205,45 +205,46 @@ defmodule Formatter do
             locale: get_locale(opts)
           )
       end
-    else
-      {:error, reason} -> {:error, reason}
     end
   end
 
   defp format_date_iso(value, date_definition, opts) do
     with {:ok, value} <- pre_process_date_value(value, date_definition, opts) do
-      cldr(opts, DateTime).to_string(value,
-        date_format: "yyyy-MM-dd",
-        time_format: "HH:mm:ss",
-        locale: get_locale(opts)
-      )
-    else
-      {:error, reason} -> {:error, reason}
+      case value do
+        %Date{} ->
+          {:ok, Date.to_iso8601(value)}
+
+        %Time{} ->
+          {:ok, Time.to_iso8601(value)}
+
+        %DateTime{} ->
+          {:ok, DateTime.to_iso8601(value)}
+
+        _ ->
+          {:error, "Invalid Date/Time value #{value}"}
+      end
     end
   end
 
   defp format_date_unix(value, date_definition, opts) do
-    with {:ok, value} <- pre_process_date_value(value, date_definition, opts) do
+    with {:ok, value} <- pre_process_date_value(value, date_definition, opts),
+         {:ok, value} <- ensure_unix_convertible(value) do
       milliseconds =
-        Map.get(date_definition, "milliseconds", "false")
-        |> String.to_existing_atom()
+        Map.get(date_definition, "milliseconds", false)
 
-      cond do
-        milliseconds == true ->
-          DateTime.to_unix(value, :millisecond)
-          |> Integer.to_string()
-          |> OK.wrap()
+      precision = if milliseconds, do: :millisecond, else: :second
 
-        milliseconds == false ->
-          DateTime.to_unix(value)
-          |> Integer.to_string()
-          |> OK.wrap()
+      DateTime.to_unix(value, precision)
+      |> Integer.to_string()
+      |> OK.wrap()
+    end
+  end
 
-        milliseconds ->
-          {:error, "Invalid value for milliseconds option #{milliseconds}"}
-      end
-    else
-      {:error, reason} -> {:error, reason}
+  defp ensure_unix_convertible(value) do
+    case value do
+      %Date{} -> DateTime.new(value, ~T[00:00:00])
+      %DateTime{} -> {:ok, value}
+      _ -> {:error, "Value #{inspect(value)} is not a Date or DateTime."}
     end
   end
 
@@ -359,8 +360,6 @@ defmodule Formatter do
   defp get_locale(opts) do
     Keyword.get(opts, :locale) ||
       Process.get(:locale)
-
-    # || Gettext.get_locale(ScanpageV2Web.Gettext)
   end
 
   defp get_timezone(opts, default \\ nil) do

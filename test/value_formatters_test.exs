@@ -137,6 +137,20 @@ defmodule FormatterTest do
 
       assert Formatter.to_string(1, format_definition, @opts) == {:ok, "1 kg"}
     end
+
+    test "format integer with german locale in opts" do
+      assert Formatter.to_string(1_000, nil, Keyword.merge(@opts, locale: "de")) ==
+               {:ok, "1.000"}
+    end
+
+    test "format integer with german locale in the process" do
+      locale = Process.get(:locale)
+      Process.put(:locale, "de")
+      on_exit(fn -> Process.put(:locale, locale) end)
+
+      assert Formatter.to_string(1_000, nil, @opts) ==
+               {:ok, "1.000"}
+    end
   end
 
   describe "strings" do
@@ -481,7 +495,24 @@ defmodule FormatterTest do
       date_definition = %{"format" => "date_iso"}
 
       assert Formatter.to_string(~T[13:26:08.003], date_definition, @opts) ==
-               {:ok, "13:26:08Z"}
+               {:ok, "13:26:08.003"}
+    end
+
+    test "from iso string" do
+      date_definition = %{"format" => "date_iso"}
+
+      assert Formatter.to_string("2016-10-24T13:26:08Z", date_definition, @opts) ==
+               {:ok, "2016-10-24T13:26:08Z"}
+    end
+
+    test "from unix timestamp" do
+      date_definition = %{"format" => "date_iso"}
+
+      assert Formatter.to_string(1_477_323_744_000, date_definition, @opts) ==
+               {:ok, "2016-10-24T15:42:24.000Z"}
+
+      assert Formatter.to_string(1_477_323_744, date_definition, @opts) ==
+               {:ok, "2016-10-24T15:42:24.000Z"}
     end
   end
 
@@ -494,10 +525,24 @@ defmodule FormatterTest do
     end
 
     test "date in unix timestamp in milliseconds" do
-      date_definition = %{"format" => "date_unix", "milliseconds" => "true"}
+      date_definition = %{"format" => "date_unix", "milliseconds" => true}
 
       assert Formatter.to_string(~U[2016-10-24 13:26:08Z], date_definition, @opts) ==
                {:ok, "1477315568000"}
+    end
+
+    test "date in unix timestamp" do
+      date_definition = %{"format" => "date_unix"}
+
+      assert Formatter.to_string(~D[2016-10-24], date_definition, @opts) ==
+               {:ok, "1477267200"}
+    end
+
+    test "time in unix timestamp" do
+      date_definition = %{"format" => "date_unix"}
+
+      assert Formatter.to_string(~T[13:26:08.003], date_definition, @opts) ==
+               {:error, "Value ~T[13:26:08.003] is not a Date or DateTime."}
     end
   end
 
