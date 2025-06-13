@@ -22,9 +22,9 @@ defmodule Formatter.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.38.2", only: :dev},
-      {:ex_cldr_dates_times, "~> 2.22"},
-      {:ex_cldr_lists, "~> 2.10"},
-      {:ex_cldr_calendars, "~> 2.1"},
+      {:ex_cldr_dates_times, "~> 2.22", only: [:dev, :test]},
+      {:ex_cldr_lists, "~> 2.10", only: [:dev, :test]},
+      {:ex_cldr_calendars, "~> 2.1", only: [:dev, :test]},
       {:mox, "~> 1.0", only: [:dev, :test]},
       {:timex, "~> 3.7", only: :test},
       {:ok, "~> 2.3.0"}
