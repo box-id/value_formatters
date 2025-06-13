@@ -1,12 +1,12 @@
-defmodule FormatterInstanceTest do
+defmodule ValueFormattersInstanceTest do
   use ExUnit.Case, async: true
 
   import Mox
 
   setup :verify_on_exit!
 
-  defmodule MyFormatter do
-    use Formatter,
+  defmodule MyValueFormatters do
+    use ValueFormatters,
       cldr: MockedCldr,
       defaults: %{
         "number" => %{
@@ -15,7 +15,7 @@ defmodule FormatterInstanceTest do
       }
   end
 
-  describe "Instantiated Formatter" do
+  describe "Instantiated ValueFormatters" do
     test "uses instance defaults" do
       MockedCldr.Number
       |> expect(:to_string, fn _value, opts ->
@@ -24,7 +24,7 @@ defmodule FormatterInstanceTest do
         {:ok, "34.12"}
       end)
 
-      assert MyFormatter.to_string("34.12345", %{"format" => "number"}) == {:ok, "34.12"}
+      assert MyValueFormatters.to_string("34.12345", %{"format" => "number"}) == {:ok, "34.12"}
     end
 
     test "merges defaults when provided in call" do
@@ -35,7 +35,9 @@ defmodule FormatterInstanceTest do
         {:ok, "42.00"}
       end)
 
-      assert MyFormatter.to_string(42, %{}, defaults: %{"date" => %{"date_display" => "long"}}) ==
+      assert MyValueFormatters.to_string(42, %{},
+               defaults: %{"date" => %{"date_display" => "long"}}
+             ) ==
                {:ok, "42.00"}
     end
   end

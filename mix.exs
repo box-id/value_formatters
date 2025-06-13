@@ -1,4 +1,4 @@
-defmodule Formatter.MixProject do
+defmodule ValueFormatters.MixProject do
   use Mix.Project
 
   def project do
