@@ -6,8 +6,12 @@ defmodule ValueFormatters.MixProject do
       app: :value_formatters,
       version: "0.1.0",
       elixir: "~> 1.15",
+      elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      preferred_cli_env: [
+        "test.watch": :test
+      ]
     ]
   end
 
@@ -22,11 +26,16 @@ defmodule ValueFormatters.MixProject do
   defp deps do
     [
       {:ex_doc, "~> 0.38.2", only: :dev},
-      {:ex_cldr_dates_times, "~> 2.22"},
-      {:ex_cldr_lists, "~> 2.10"},
-      {:ex_cldr_calendars, "~> 2.1"},
+      {:ex_cldr_dates_times, "~> 2.22", only: [:dev, :test]},
+      {:ex_cldr_lists, "~> 2.10", only: [:dev, :test]},
+      {:ex_cldr_calendars, "~> 2.1", only: [:dev, :test]},
+      {:mox, "~> 1.0", only: [:dev, :test]},
       {:timex, "~> 3.7", only: :test},
-      {:ok, "~> 2.3.0"}
+      {:ok, "~> 2.3.0"},
+      {:mix_test_watch, "~> 1.3", only: [:dev, :test]}
     ]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test"]
+  defp elixirc_paths(_), do: ["lib"]
 end
