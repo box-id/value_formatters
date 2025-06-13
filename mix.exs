@@ -1,4 +1,4 @@
-defmodule ValueFormatters.MixProject do
+defmodule Formatter.MixProject do
   use Mix.Project
 
   def project do
@@ -25,6 +25,7 @@ defmodule ValueFormatters.MixProject do
       {:ex_cldr_dates_times, "~> 2.22"},
       {:ex_cldr_lists, "~> 2.10"},
       {:ex_cldr_calendars, "~> 2.1"},
+      {:mox, "~> 1.0", only: [:dev, :test]},
       {:timex, "~> 3.7", only: :test},
       {:ok, "~> 2.3.0"}
     ]

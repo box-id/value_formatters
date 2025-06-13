@@ -1,31 +1,44 @@
-defmodule ValueFormatters do
+defmodule Formatter do
   use OK.Pipe
-  alias ValueFormatters.Cldr
+
+  # Allows instantiation of the module with preset options.
+  defmacro __using__(module_opts) do
+    quote do
+      def to_string(value, format_definition, opts \\ []) do
+        defaults =
+          Keyword.get(unquote(module_opts), :defaults, %{})
+          |> Map.merge(Keyword.get(opts, :defaults, %{}))
+
+        opts =
+          Keyword.put_new(opts, :cldr, unquote(module_opts[:cldr]))
+          |> Keyword.put(:defaults, defaults)
+
+        Formatter.to_string(value, format_definition, opts)
+      end
+    end
+  end
 
   @date_display_options [:none, :short, :medium, :long, :full]
   @time_display_options [:none, :short, :medium, :long, :full]
 
-  def to_string(value, format_definition, options \\ [])
+  def to_string(value, format_definition, opts \\ [])
 
-  def to_string(nil, _format_definition, _options), do: {:ok, ""}
-  def to_string("", _format_definition, _options), do: {:ok, ""}
+  def to_string(nil, _format_definition, _opts), do: {:ok, ""}
+  def to_string("", _format_definition, _opts), do: {:ok, ""}
 
-  # def to_string(true, _format_definition, _options), do: {:ok, Cldr.Message.format("Yes")}
-  # def to_string(false, _format_definition, _options), do: {:ok, Cldr.Message.format("No")}
-
-  def to_string(value, format_definition, options) do
+  def to_string(value, format_definition, opts) do
     format_definition =
       format_definition
       |> expand_format_definition(value)
-      |> merge_with_defaults(options)
+      |> merge_with_defaults(opts)
 
     # do the formatting
     case format_definition["format"] do
-      "number" -> format_number(value, format_definition, options)
+      "number" -> format_number(value, format_definition, opts)
       "string" -> format_string(value, format_definition)
-      "date" -> format_date(value, format_definition, options)
-      "date_relative" -> format_date_relative(value, format_definition, options)
-      "coordinates" -> format_coordinates(value, format_definition)
+      "date" -> format_date(value, format_definition, opts)
+      "date_relative" -> format_date_relative(value, format_definition, opts)
+      "coordinates" -> format_coordinates(value, format_definition, opts)
       _ -> {:error, "Unsupported format #{format_definition["format"]}"}
     end
     |> handle_cldr_error()
@@ -82,6 +95,9 @@ defmodule ValueFormatters do
     end
   end
 
+  # FIXME: Nicer error
+  defp cldr(opts, mod_name), do: Keyword.fetch!(opts, :cldr) |> Module.concat(mod_name)
+
   defp format_number(value, number_definition, opts) when is_number(value) do
     precision = Map.get(number_definition, "precision")
     unit = Map.get(number_definition, "unit")
@@ -97,7 +113,10 @@ defmodule ValueFormatters do
         {value, precision}
       end
 
-    Cldr.Number.to_string(rounded_value, locale: get_locale(opts), fractional_digits: precision)
+    cldr(opts, Number).to_string(rounded_value,
+      locale: get_locale(opts),
+      fractional_digits: precision
+    )
     ~> append_unit(unit, opts)
   end
 
@@ -155,15 +174,15 @@ defmodule ValueFormatters do
 
         # Value of type Time has to be formatted with Cldr.Time
         date_display == :none or is_time(value) ->
-          Cldr.Time.to_string(value, format: time_display, locale: get_locale(opts))
+          cldr(opts, Time).to_string(value, format: time_display, locale: get_locale(opts))
 
         # Value of type Date has to be formatted with Cldr.Date
         time_display == :none or is_date(value) ->
-          Cldr.Date.to_string(value, format: date_display, locale: get_locale(opts))
+          cldr(opts, Date).to_string(value, format: date_display, locale: get_locale(opts))
 
         # Covers DateTime and NaiveDateTime
         true ->
-          Cldr.DateTime.to_string(value,
+          cldr(opts, DateTime).to_string(value,
             date_format: date_display,
             time_format: time_display,
             locale: get_locale(opts)
@@ -242,7 +261,7 @@ defmodule ValueFormatters do
   defp format_date_relative(value, date_definition, opts) do
     with {:ok, value} <- pre_process_date_value(value, date_definition, opts) do
       if not is_time(value) do
-        Cldr.DateTime.Relative.to_string(value, locale: get_locale(opts))
+        cldr(opts, DateTime.Relative).to_string(value, locale: get_locale(opts))
       else
         {:error, "Date part is required for relative date formatting."}
       end
@@ -251,7 +270,7 @@ defmodule ValueFormatters do
     end
   end
 
-  defp format_coordinates(value, coordinate_definition) do
+  defp format_coordinates(value, coordinate_definition, opts) do
     [lat, lng, radius] =
       case value do
         %{"lat" => lat, "lng" => lng, "radius" => radius} -> [lat, lng, radius]
@@ -261,11 +280,16 @@ defmodule ValueFormatters do
       end
 
     with {:ok, lat_formatted} <-
-           format_number(lat, %{"format" => "number", "precision" => 5}, []),
-         {:ok, lng_formatted} <- format_number(lng, %{"format" => "number", "precision" => 5}, []) do
+           format_number(lat, %{"format" => "number", "precision" => 5}, opts),
+         {:ok, lng_formatted} <-
+           format_number(lng, %{"format" => "number", "precision" => 5}, opts) do
       if get_in(coordinate_definition, ["radius_display"]) != false and radius != nil do
         with {:ok, radius_formatted} <-
-               format_number(radius, %{"format" => "number", "precision" => 0, "unit" => "m"}, []) do
+               format_number(
+                 radius,
+                 %{"format" => "number", "precision" => 0, "unit" => "m"},
+                 opts
+               ) do
           {:ok, "#{lat_formatted}\u{00B0}, #{lng_formatted}\u{00B0}, #{radius_formatted}"}
         else
           {:error, reason} -> {:error, reason}
@@ -278,10 +302,11 @@ defmodule ValueFormatters do
     end
   end
 
-  defp get_locale(opts, default \\ nil) do
+  defp get_locale(opts) do
     Keyword.get(opts, :locale) ||
-      Process.get(:locale) ||
-      default
+      Process.get(:locale)
+
+    # || Gettext.get_locale(ScanpageV2Web.Gettext)
   end
 
   defp get_timezone(opts, default \\ nil) do
