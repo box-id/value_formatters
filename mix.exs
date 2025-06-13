@@ -8,7 +8,10 @@ defmodule Formatter.MixProject do
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      preferred_cli_env: [
+        "test.watch": :test
+      ]
     ]
   end
 
@@ -28,7 +31,8 @@ defmodule Formatter.MixProject do
       {:ex_cldr_calendars, "~> 2.1", only: [:dev, :test]},
       {:mox, "~> 1.0", only: [:dev, :test]},
       {:timex, "~> 3.7", only: :test},
-      {:ok, "~> 2.3.0"}
+      {:ok, "~> 2.3.0"},
+      {:mix_test_watch, "~> 1.3", only: [:dev, :test]}
     ]
   end
 
