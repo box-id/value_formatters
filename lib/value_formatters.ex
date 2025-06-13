@@ -1,4 +1,4 @@
-defmodule Formatter do
+defmodule ValueFormatters do
   use OK.Pipe
 
   # Allows instantiation of the module with preset options.
@@ -13,7 +13,7 @@ defmodule Formatter do
           Keyword.put_new(opts, :cldr, unquote(module_opts[:cldr]))
           |> Keyword.put(:defaults, defaults)
 
-        Formatter.to_string(value, format_definition, opts)
+        ValueFormatters.to_string(value, format_definition, opts)
       end
     end
   end
