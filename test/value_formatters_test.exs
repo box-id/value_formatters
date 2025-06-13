@@ -462,6 +462,45 @@ defmodule FormatterTest do
     end
   end
 
+  describe "date_iso" do
+    test "datetime in iso8601" do
+      date_definition = %{"format" => "date_iso"}
+
+      assert Formatter.to_string(~U[2016-10-24 13:26:08Z], date_definition, @opts) ==
+               {:ok, "2016-10-24T13:26:08Z"}
+    end
+
+    test "date in iso8601" do
+      date_definition = %{"format" => "date_iso"}
+
+      assert Formatter.to_string(~D[2016-10-24], date_definition, @opts) ==
+               {:ok, "2016-10-24"}
+    end
+
+    test "time in iso8601" do
+      date_definition = %{"format" => "date_iso"}
+
+      assert Formatter.to_string(~T[13:26:08.003], date_definition, @opts) ==
+               {:ok, "13:26:08Z"}
+    end
+  end
+
+  describe "date_unix" do
+    test "datetime in unix timestamp" do
+      date_definition = %{"format" => "date_unix"}
+
+      assert Formatter.to_string(~U[2016-10-24 13:26:08Z], date_definition, @opts) ==
+               {:ok, "1477315568"}
+    end
+
+    test "date in unix timestamp in milliseconds" do
+      date_definition = %{"format" => "date_unix", "milliseconds" => "true"}
+
+      assert Formatter.to_string(~U[2016-10-24 13:26:08Z], date_definition, @opts) ==
+               {:ok, "1477315568000"}
+    end
+  end
+
   describe "coordinates" do
     test "full coordinates" do
       assert Formatter.to_string([123.1345, 34.123, 2], %{"format" => "coordinates"}, @opts) ==

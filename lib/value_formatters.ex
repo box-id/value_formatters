@@ -34,12 +34,29 @@ defmodule Formatter do
 
     # do the formatting
     case format_definition["format"] do
-      "number" -> format_number(value, format_definition, opts)
-      "string" -> format_string(value, format_definition)
-      "date" -> format_date(value, format_definition, opts)
-      "date_relative" -> format_date_relative(value, format_definition, opts)
-      "coordinates" -> format_coordinates(value, format_definition, opts)
-      _ -> {:error, "Unsupported format #{format_definition["format"]}"}
+      "number" ->
+        format_number(value, format_definition, opts)
+
+      "string" ->
+        format_string(value, format_definition)
+
+      "date" ->
+        format_date(value, format_definition, opts)
+
+      "date_relative" ->
+        format_date_relative(value, format_definition, opts)
+
+      "date_iso" ->
+        format_date_iso(value, format_definition, opts)
+
+      "date_unix" ->
+        format_date_unix(value, format_definition, opts)
+
+      "coordinates" ->
+        format_coordinates(value, format_definition, opts)
+
+      _ ->
+        {:error, "Unsupported format #{format_definition["format"]}"}
     end
     |> handle_cldr_error()
   end
@@ -187,6 +204,43 @@ defmodule Formatter do
             time_format: time_display,
             locale: get_locale(opts)
           )
+      end
+    else
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp format_date_iso(value, date_definition, opts) do
+    with {:ok, value} <- pre_process_date_value(value, date_definition, opts) do
+      cldr(opts, DateTime).to_string(value,
+        date_format: "yyyy-MM-dd",
+        time_format: "HH:mm:ss",
+        locale: get_locale(opts)
+      )
+    else
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp format_date_unix(value, date_definition, opts) do
+    with {:ok, value} <- pre_process_date_value(value, date_definition, opts) do
+      milliseconds =
+        Map.get(date_definition, "milliseconds", "false")
+        |> String.to_existing_atom()
+
+      cond do
+        milliseconds == true ->
+          DateTime.to_unix(value, :millisecond)
+          |> Integer.to_string()
+          |> OK.wrap()
+
+        milliseconds == false ->
+          DateTime.to_unix(value)
+          |> Integer.to_string()
+          |> OK.wrap()
+
+        milliseconds ->
+          {:error, "Invalid value for milliseconds option #{milliseconds}"}
       end
     else
       {:error, reason} -> {:error, reason}
