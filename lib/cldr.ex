@@ -1,4 +1,5 @@
-defmodule ValueFormatters.Cldr do
+# For test purposes only
+defmodule Formatter.Cldr do
   use Cldr,
     # Available locales are defined in the config files s.t. they can vary by environment.
     otp_app: :value_formatters,

@@ -1,15 +1,17 @@
-defmodule ValueFormattersTest do
+defmodule FormatterTest do
   use ExUnit.Case, async: true
 
-  alias ValueFormatters
+  alias Formatter
+
+  @opts [cldr: Formatter.Cldr]
 
   describe "empty inputs" do
     test "outputs empty string for nil input" do
-      assert {:ok, ""} == ValueFormatters.to_string(nil, %{})
+      assert {:ok, ""} == Formatter.to_string(nil, %{})
     end
 
     test "outputs empty string for empty string input" do
-      assert {:ok, ""} == ValueFormatters.to_string("", %{})
+      assert {:ok, ""} == Formatter.to_string("", %{})
     end
   end
 
@@ -21,9 +23,9 @@ defmodule ValueFormattersTest do
         "unit" => "kg"
       }
 
-      assert ValueFormatters.to_string(1.234, format_definition) == {:ok, "1.23 kg"}
+      assert Formatter.to_string(1.234, format_definition, @opts) == {:ok, "1.23 kg"}
 
-      assert ValueFormatters.to_string(12.345678912345679983731293, format_definition) ==
+      assert Formatter.to_string(12.345678912345679983731293, format_definition, @opts) ==
                {:ok, "12.35 kg"}
     end
 
@@ -33,7 +35,7 @@ defmodule ValueFormattersTest do
         "precision" => 2
       }
 
-      assert ValueFormatters.to_string(1.234, format_definition) == {:ok, "1.23"}
+      assert Formatter.to_string(1.234, format_definition, @opts) == {:ok, "1.23"}
     end
 
     test "format float with units" do
@@ -42,7 +44,7 @@ defmodule ValueFormattersTest do
         "unit" => "kg"
       }
 
-      assert ValueFormatters.to_string(1.234, format_definition) == {:ok, "1.234 kg"}
+      assert Formatter.to_string(1.234, format_definition, @opts) == {:ok, "1.234 kg"}
     end
 
     test "format float without units and precision" do
@@ -50,12 +52,16 @@ defmodule ValueFormattersTest do
         "format" => "number"
       }
 
-      assert ValueFormatters.to_string(1.234, format_definition) == {:ok, "1.234"}
+      assert Formatter.to_string(1.234, format_definition, @opts) == {:ok, "1.234"}
     end
 
     test "format float using default options" do
-      assert ValueFormatters.to_string(1.234, "number",
-               defaults: %{"number" => %{"precision" => 2, "unit" => "kg"}, "date" => %{}}
+      assert Formatter.to_string(
+               1.234,
+               "number",
+               Keyword.merge(@opts,
+                 defaults: %{"number" => %{"precision" => 2, "unit" => "kg"}, "date" => %{}}
+               )
              ) == {:ok, "1.23 kg"}
     end
 
@@ -65,8 +71,12 @@ defmodule ValueFormattersTest do
         "precision" => 2
       }
 
-      assert ValueFormatters.to_string(1.234, format_definition,
-               defaults: %{"number" => %{"precision" => 3, "unit" => "kg"}, "date" => %{}}
+      assert Formatter.to_string(
+               1.234,
+               format_definition,
+               Keyword.merge(@opts,
+                 defaults: %{"number" => %{"precision" => 3, "unit" => "kg"}, "date" => %{}}
+               )
              ) == {:ok, "1.23 kg"}
     end
 
@@ -77,8 +87,12 @@ defmodule ValueFormattersTest do
         "unit" => "kg"
       }
 
-      assert ValueFormatters.to_string(1.234, format_definition,
-               defaults: %{"number" => %{"precision" => 3, "unit" => "l"}, "date" => %{}}
+      assert Formatter.to_string(
+               1.234,
+               format_definition,
+               Keyword.merge(@opts,
+                 defaults: %{"number" => %{"precision" => 3, "unit" => "l"}, "date" => %{}}
+               )
              ) == {:ok, "1.23 kg"}
     end
 
@@ -89,25 +103,29 @@ defmodule ValueFormattersTest do
         "unit" => "kg"
       }
 
-      assert ValueFormatters.to_string("1.234", format_definition) == {:ok, "1.23 kg"}
+      assert Formatter.to_string("1.234", format_definition, @opts) == {:ok, "1.23 kg"}
     end
 
     test "no changes to float" do
-      assert ValueFormatters.to_string(1.234, nil) == {:ok, "1.234"}
+      assert Formatter.to_string(1.234, nil, @opts) == {:ok, "1.234"}
     end
 
     # Locale en
     test "format float using locale" do
-      assert ValueFormatters.to_string(1_000.234, nil) == {:ok, "1,000.234"}
+      assert Formatter.to_string(1_000.234, nil, @opts) == {:ok, "1,000.234"}
     end
 
     test "unchanged float inferred as a string" do
-      assert ValueFormatters.to_string("1000.234", nil) == {:ok, "1000.234"}
+      assert Formatter.to_string("1000.234", nil, @opts) == {:ok, "1000.234"}
     end
 
     test "format float with options and locale" do
-      assert ValueFormatters.to_string("1000.234", %{"format" => "number"},
-               defaults: %{"number" => %{"precision" => 2}}
+      assert Formatter.to_string(
+               "1000.234",
+               %{"format" => "number"},
+               Keyword.merge(@opts,
+                 defaults: %{"number" => %{"precision" => 2}}
+               )
              ) == {:ok, "1,000.23"}
     end
 
@@ -117,21 +135,21 @@ defmodule ValueFormattersTest do
         "unit" => "kg"
       }
 
-      assert ValueFormatters.to_string(1, format_definition) == {:ok, "1 kg"}
+      assert Formatter.to_string(1, format_definition, @opts) == {:ok, "1 kg"}
     end
   end
 
   describe "strings" do
     test "string with no format definition" do
-      assert ValueFormatters.to_string("Hello", nil) == {:ok, "Hello"}
+      assert Formatter.to_string("Hello", nil) == {:ok, "Hello"}
     end
 
     test "string with a shorthand" do
-      assert ValueFormatters.to_string("Hello", "string") == {:ok, "Hello"}
+      assert Formatter.to_string("Hello", "string") == {:ok, "Hello"}
     end
 
     test "number string" do
-      assert ValueFormatters.to_string("12.34", %{"format" => "string"}) == {:ok, "12.34"}
+      assert Formatter.to_string("12.34", %{"format" => "string"}) == {:ok, "12.34"}
     end
   end
 
@@ -143,7 +161,7 @@ defmodule ValueFormattersTest do
         "time_display" => "none"
       }
 
-      assert ValueFormatters.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, []) ==
+      assert Formatter.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, @opts) ==
                {:ok, "10/24/16"}
     end
 
@@ -154,7 +172,7 @@ defmodule ValueFormattersTest do
         "time_display" => "none"
       }
 
-      assert ValueFormatters.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, []) ==
+      assert Formatter.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, @opts) ==
                {:ok, "Oct 24, 2016"}
 
       date_definition = %{
@@ -164,7 +182,7 @@ defmodule ValueFormattersTest do
         "time_display" => "none"
       }
 
-      assert ValueFormatters.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, []) ==
+      assert Formatter.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, @opts) ==
                {:ok, "Oct 24, 2016"}
     end
 
@@ -175,7 +193,7 @@ defmodule ValueFormattersTest do
         "time_display" => "none"
       }
 
-      assert ValueFormatters.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, []) ==
+      assert Formatter.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, @opts) ==
                {:ok, "October 24, 2016"}
     end
 
@@ -186,7 +204,7 @@ defmodule ValueFormattersTest do
         "time_display" => "none"
       }
 
-      assert ValueFormatters.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, []) ==
+      assert Formatter.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, @opts) ==
                {:ok, "Monday, October 24, 2016"}
     end
 
@@ -197,7 +215,7 @@ defmodule ValueFormattersTest do
         "time_display" => "short"
       }
 
-      assert ValueFormatters.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, []) ==
+      assert Formatter.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, @opts) ==
                {:ok, "1:26 PM"}
     end
 
@@ -208,7 +226,7 @@ defmodule ValueFormattersTest do
         "time_display" => "medium"
       }
 
-      assert ValueFormatters.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, []) ==
+      assert Formatter.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, @opts) ==
                {:ok, "1:26:08 PM"}
 
       date_definition = %{
@@ -218,7 +236,7 @@ defmodule ValueFormattersTest do
         # "time_display" => "medium"
       }
 
-      assert ValueFormatters.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, []) ==
+      assert Formatter.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, @opts) ==
                {:ok, "1:26:08 PM"}
     end
 
@@ -229,7 +247,7 @@ defmodule ValueFormattersTest do
         "time_display" => "long"
       }
 
-      assert ValueFormatters.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, []) ==
+      assert Formatter.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, @opts) ==
                {:ok, "1:26:08 PM UTC"}
     end
 
@@ -240,7 +258,7 @@ defmodule ValueFormattersTest do
         "time_display" => "full"
       }
 
-      assert ValueFormatters.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, []) ==
+      assert Formatter.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, @opts) ==
                {:ok, "1:26:08 PM GMT"}
     end
 
@@ -251,7 +269,7 @@ defmodule ValueFormattersTest do
         "time_display" => "medium"
       }
 
-      assert ValueFormatters.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, []) ==
+      assert Formatter.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, @opts) ==
                {:ok, "Oct 24, 2016, 1:26:08 PM"}
 
       date_definition = %{
@@ -261,7 +279,7 @@ defmodule ValueFormattersTest do
         # "time_display" => "medium"
       }
 
-      assert ValueFormatters.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, []) ==
+      assert Formatter.to_string(~U[2016-10-24 13:26:08.003Z], date_definition, @opts) ==
                {:ok, "Oct 24, 2016, 1:26:08 PM"}
     end
 
@@ -272,7 +290,7 @@ defmodule ValueFormattersTest do
         "time_display" => "short"
       }
 
-      assert ValueFormatters.to_string(~D[2016-10-24], date_definition, []) == {:ok, "10/24/16"}
+      assert Formatter.to_string(~D[2016-10-24], date_definition, @opts) == {:ok, "10/24/16"}
     end
 
     test "date from iso8601" do
@@ -282,11 +300,11 @@ defmodule ValueFormattersTest do
         "time_display" => "none"
       }
 
-      assert ValueFormatters.to_string("2016-10-24T15:22:24Z", date_definition, []) ==
+      assert Formatter.to_string("2016-10-24T15:22:24Z", date_definition, @opts) ==
                {:ok, "Oct 24, 2016"}
 
       # Assert that date-only string is accepted
-      assert ValueFormatters.to_string("2016-10-24", date_definition, []) ==
+      assert Formatter.to_string("2016-10-24", date_definition, @opts) ==
                {:ok, "Oct 24, 2016"}
     end
 
@@ -297,16 +315,20 @@ defmodule ValueFormattersTest do
         "time_display" => "medium"
       }
 
-      assert ValueFormatters.to_string(
+      assert Formatter.to_string(
                "2016-08-24T15:22:24Z",
                date_definition,
-               time_zone: "Europe/Berlin"
+               Keyword.merge(@opts, time_zone: "Europe/Berlin")
              ) ==
                {:ok, "5:22:24 PM"}
 
       # Assert that time-only string is accepted. Note that it is not shifted to any timezone as
       # this isn't possible with wall clock time.
-      assert ValueFormatters.to_string("15:22:24", date_definition, time_zone: "Europe/Berlin") ==
+      assert Formatter.to_string(
+               "15:22:24",
+               date_definition,
+               Keyword.merge(@opts, time_zone: "Europe/Berlin")
+             ) ==
                {:ok, "3:22:24 PM"}
     end
 
@@ -317,7 +339,7 @@ defmodule ValueFormattersTest do
         "time_display" => "medium"
       }
 
-      assert ValueFormatters.to_string("2016-10-24T15:22:24Z", date_definition, []) ==
+      assert Formatter.to_string("2016-10-24T15:22:24Z", date_definition, @opts) ==
                {:ok, "Oct 24, 2016, 3:22:24 PM"}
     end
 
@@ -328,7 +350,7 @@ defmodule ValueFormattersTest do
         "time_display" => "medium"
       }
 
-      assert ValueFormatters.to_string(1_477_323_744, date_definition, []) ==
+      assert Formatter.to_string(1_477_323_744, date_definition, @opts) ==
                {:ok, "Oct 24, 2016, 3:42:24 PM"}
     end
 
@@ -337,92 +359,91 @@ defmodule ValueFormattersTest do
         "date_display" => "medium"
       }
 
-      assert ValueFormatters.to_string(~D[2016-10-24], date_definition, []) ==
-               {:ok, "Oct 24, 2016"}
+      assert Formatter.to_string(~D[2016-10-24], date_definition, @opts) == {:ok, "Oct 24, 2016"}
     end
 
     # medium is the default
     test "date shorthand" do
-      assert ValueFormatters.to_string(~D[2016-10-24], "date") == {:ok, "Oct 24, 2016"}
+      assert Formatter.to_string(~D[2016-10-24], "date", @opts) == {:ok, "Oct 24, 2016"}
     end
 
     test "datetime shorthand" do
-      assert ValueFormatters.to_string(~U[2016-10-24 13:26:08.003Z], "date") ==
+      assert Formatter.to_string(~U[2016-10-24 13:26:08.003Z], "date", @opts) ==
                {:ok, "Oct 24, 2016, 1:26:08 PM"}
     end
 
     test "time shorthand" do
-      assert ValueFormatters.to_string(~T[13:26:08.003], "date") == {:ok, "1:26:08 PM"}
+      assert Formatter.to_string(~T[13:26:08.003], "date", @opts) == {:ok, "1:26:08 PM"}
     end
   end
 
   # TODO How do I test relative dates?
   describe "date_relative" do
     test "works with shorthand description" do
-      assert ValueFormatters.to_string(DateTime.utc_now(), "date_relative") == {:ok, "now"}
+      assert Formatter.to_string(DateTime.utc_now(), "date_relative", @opts) == {:ok, "now"}
     end
 
     test "yesterday" do
       {:ok, now} = DateTime.now("UTC")
       yesterday = Timex.shift(now, hours: -24)
 
-      assert ValueFormatters.to_string(yesterday, "date_relative") == {:ok, "yesterday"}
+      assert Formatter.to_string(yesterday, "date_relative", @opts) == {:ok, "yesterday"}
     end
 
     test "tomorrow" do
       {:ok, now} = DateTime.now("UTC")
       tomorrow = Timex.shift(now, hours: 24)
 
-      assert ValueFormatters.to_string(tomorrow, "date_relative") == {:ok, "tomorrow"}
+      assert Formatter.to_string(tomorrow, "date_relative", @opts) == {:ok, "tomorrow"}
     end
 
     test "5 days ago" do
       {:ok, now} = DateTime.now("UTC")
       past = Timex.shift(now, hours: -5 * 24)
 
-      assert ValueFormatters.to_string(past, "date_relative") == {:ok, "5 days ago"}
+      assert Formatter.to_string(past, "date_relative", @opts) == {:ok, "5 days ago"}
     end
 
     test "in 5 days" do
       {:ok, now} = DateTime.now("UTC")
       future = Timex.shift(now, hours: 5 * 24)
 
-      assert ValueFormatters.to_string(future, "date_relative") == {:ok, "in 5 days"}
+      assert Formatter.to_string(future, "date_relative", @opts) == {:ok, "in 5 days"}
     end
 
     test "12 months ago" do
       {:ok, now} = DateTime.now("UTC")
       past = Timex.shift(now, days: -364)
 
-      assert ValueFormatters.to_string(past, "date_relative") == {:ok, "12 months ago"}
+      assert Formatter.to_string(past, "date_relative", @opts) == {:ok, "12 months ago"}
     end
 
     test "last year" do
       {:ok, now} = DateTime.now("UTC")
       past = Timex.shift(now, years: -1, months: -2)
 
-      assert ValueFormatters.to_string(past, "date_relative") == {:ok, "last year"}
+      assert Formatter.to_string(past, "date_relative", @opts) == {:ok, "last year"}
     end
 
     test "last week" do
       {:ok, now} = DateTime.now("UTC")
       past = Timex.shift(now, weeks: -1, days: -2)
 
-      assert ValueFormatters.to_string(past, "date_relative") == {:ok, "last week"}
+      assert Formatter.to_string(past, "date_relative", @opts) == {:ok, "last week"}
     end
 
     test "5 years ago" do
       {:ok, now} = DateTime.now("UTC")
       past = Timex.shift(now, years: -5, months: -2, days: -1)
 
-      assert ValueFormatters.to_string(past, "date_relative") == {:ok, "5 years ago"}
+      assert Formatter.to_string(past, "date_relative", @opts) == {:ok, "5 years ago"}
     end
 
     test "from unix timestamp" do
       {:ok, now} = DateTime.now("UTC")
       past = Timex.shift(now, years: -5, months: -2, days: -1)
 
-      assert ValueFormatters.to_string(past, "date_relative") == {:ok, "5 years ago"}
+      assert Formatter.to_string(past, "date_relative", @opts) == {:ok, "5 years ago"}
     end
 
     test "date in iso8601" do
@@ -430,83 +451,83 @@ defmodule ValueFormattersTest do
       past = Timex.shift(now, years: -5, months: -2, days: -1)
       date_iso = DateTime.to_iso8601(past)
 
-      assert ValueFormatters.to_string(date_iso, "date_relative") == {:ok, "5 years ago"}
+      assert Formatter.to_string(date_iso, "date_relative", @opts) == {:ok, "5 years ago"}
     end
 
     test "time object not supported" do
       {:ok, time} = Time.new(1, 10, 30)
 
-      assert ValueFormatters.to_string(time, "date_relative") ==
+      assert Formatter.to_string(time, "date_relative") ==
                {:error, "Date part is required for relative date formatting."}
     end
   end
 
   describe "coordinates" do
     test "full coordinates" do
-      assert ValueFormatters.to_string([123.1345, 34.123, 2], %{"format" => "coordinates"}, []) ==
+      assert Formatter.to_string([123.1345, 34.123, 2], %{"format" => "coordinates"}, @opts) ==
                {:ok, "123.1345°, 34.123°, 2 m"}
     end
 
     test "inference object with radius" do
-      assert ValueFormatters.to_string(
-               %{"lat" => 43.1298, "lng" => 54.1234, "radius" => 1},
-               %{},
-               []
-             ) ==
+      assert Formatter.to_string(%{"lat" => 43.1298, "lng" => 54.1234, "radius" => 1}, %{}, @opts) ==
                {:ok, "43.1298°, 54.1234°, 1 m"}
     end
 
     test "inference object no radius" do
-      assert ValueFormatters.to_string(%{"lat" => 43.1298, "lng" => 54.1234}, %{}, []) ==
+      assert Formatter.to_string(%{"lat" => 43.1298, "lng" => 54.1234}, %{}, @opts) ==
                {:ok, "43.1298°, 54.1234°"}
     end
 
     test "inference list with radius" do
-      assert ValueFormatters.to_string([123.1345, 34.123, 2], %{}, []) ==
+      assert Formatter.to_string([123.1345, 34.123, 2], %{}, @opts) ==
                {:ok, "123.1345°, 34.123°, 2 m"}
     end
 
     test "inference list no radius" do
-      assert ValueFormatters.to_string([123.1345, 34.123], %{}, []) ==
+      assert Formatter.to_string([123.1345, 34.123], %{}, @opts) ==
                {:ok, "123.1345°, 34.123°"}
     end
 
     test "with radius show radius" do
-      assert ValueFormatters.to_string(
+      assert Formatter.to_string(
                %{"lat" => 123.134567, "lng" => 34.12345, "radius" => 2},
                %{"format" => "coordinates"},
-               []
+               @opts
              ) ==
                {:ok, "123.13457°, 34.12345°, 2 m"}
     end
 
     test "no radius show radius" do
-      assert ValueFormatters.to_string(
+      assert Formatter.to_string(
                %{"lat" => 123.134567, "lng" => 34.12345},
                %{"format" => "coordinates", "radius_display" => true},
-               []
+               @opts
              ) ==
                {:ok, "123.13457°, 34.12345°"}
     end
 
     test "with radius hide radius" do
-      assert ValueFormatters.to_string(
+      assert Formatter.to_string(
                %{"lat" => 123.134567, "lng" => 34.12345, "radius" => 2},
                %{"format" => "coordinates", "radius_display" => false},
-               []
+               @opts
              ) ==
                {:ok, "123.13457°, 34.12345°"}
     end
   end
 
   test "call with empty object format desription" do
-    assert ValueFormatters.to_string(3.14244453, %{"precision" => 2}) == {:ok, "3.14"}
+    assert Formatter.to_string(3.14244453, %{"precision" => 2}, @opts) == {:ok, "3.14"}
   end
 
   describe "render" do
     test "render unit html" do
-      assert ValueFormatters.to_string("123", %{"format" => "number", "unit" => "kg"},
-               render_unit: fn unit -> "<span class=\"text-gray-500\">#{unit}</span>" end
+      assert Formatter.to_string(
+               "123",
+               %{"format" => "number", "unit" => "kg"},
+               Keyword.merge(@opts,
+                 render_unit: fn unit -> "<span class=\"text-gray-500\">#{unit}</span>" end
+               )
              ) == {:ok, "123.0 <span class=\"text-gray-500\">kg</span>"}
     end
   end
