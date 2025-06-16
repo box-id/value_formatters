@@ -112,8 +112,15 @@ defmodule ValueFormatters do
     end
   end
 
-  # FIXME: Nicer error
-  defp cldr(opts, mod_name), do: Keyword.fetch!(opts, :cldr) |> Module.concat(mod_name)
+  defp cldr(opts, mod_name) do
+    with {:ok, cldr} <- Keyword.fetch(opts, :cldr) do
+      Module.concat(cldr, mod_name)
+    else
+      :error ->
+        raise ArgumentError,
+          message: "The :cldr option is required."
+    end
+  end
 
   defp format_number(value, number_definition, opts) when is_number(value) do
     precision = Map.get(number_definition, "precision")
