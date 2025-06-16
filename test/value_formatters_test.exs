@@ -624,9 +624,11 @@ defmodule ValueFormattersTest do
 
   describe "missing cldr" do
     test "returns error when cldr is not available" do
-      assert_raise ArgumentError, "The :cldr option is required.", fn ->
-        ValueFormatters.to_string(1.234, %{"format" => "number"}, [])
-      end
+      assert_raise ArgumentError,
+                   "Attempted to access a Cldr module, but non was specified. Pass the :cldr option to to_string/3 or when instantiating the module.",
+                   fn ->
+                     ValueFormatters.to_string(1.234, %{"format" => "number"}, [])
+                   end
     end
   end
 end

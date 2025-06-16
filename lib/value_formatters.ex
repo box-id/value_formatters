@@ -118,7 +118,8 @@ defmodule ValueFormatters do
     else
       :error ->
         raise ArgumentError,
-          message: "The :cldr option is required."
+          message:
+            "Attempted to access a Cldr module, but non was specified. Pass the :cldr option to to_string/3 or when instantiating the module."
     end
   end
 

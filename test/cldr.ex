@@ -10,7 +10,6 @@ defmodule ValueFormatters.Cldr do
       Cldr.Calendar,
       Cldr.DateTime,
       Cldr.Time,
-      Cldr.Date,
-      Cldr.List
+      Cldr.Date
     ]
 end
