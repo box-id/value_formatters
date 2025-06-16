@@ -621,4 +621,12 @@ defmodule ValueFormattersTest do
              ) == {:ok, "123.0 <span class=\"text-gray-500\">kg</span>"}
     end
   end
+
+  describe "missing cldr" do
+    test "returns error when cldr is not available" do
+      assert_raise ArgumentError, "The :cldr option is required.", fn ->
+        ValueFormatters.to_string(1.234, %{"format" => "number"}, [])
+      end
+    end
+  end
 end
