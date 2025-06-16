@@ -67,8 +67,7 @@ defmodule ValueFormatters do
   end
 
   # In case of a shorthand formatDefinition, expand it
-  defp expand_format_definition(format_definition, _value)
-       when format_definition in ["number", "string", "date", "date_relative", "coordinates"] do
+  defp expand_format_definition(format_definition, _value) when is_binary(format_definition) do
     %{"format" => format_definition}
   end
 
