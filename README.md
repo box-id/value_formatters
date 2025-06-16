@@ -1,21 +1,16 @@
 # ValueFormatters
 
-**TODO: Add description**
+## Usage
 
-## Installation
+To use value formatters, the host application needs to set up its own Cldr backend, including the following libraries:
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `value_formatters` to your list of dependencies in `mix.exs`:
+* Cldr.Number,
+* Cldr.Calendar,
+* Cldr.DateTime,
+* Cldr.Time,
+* Cldr.Date
 
-```elixir
-def deps do
-  [
-    {:value_formatters, "~> 0.1.0"}
-  ]
-end
-```
+Cldr needs to be passed as an option to the `to_string/3` method under `cldr` key.
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/value_formatters>.
+
 
