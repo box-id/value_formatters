@@ -563,6 +563,15 @@ defmodule ValueFormattersTest do
                {:ok, "123.1345°, 34.123°, 2 m"}
     end
 
+    test "mixed coordinates with radius" do
+      assert ValueFormatters.to_string(
+               [123.1345, "34.123", 2],
+               %{"format" => "coordinates"},
+               @opts
+             ) ==
+               {:ok, "123.1345°, 34.123°, 2 m"}
+    end
+
     test "inference object with radius" do
       assert ValueFormatters.to_string(
                %{"lat" => 43.1298, "lng" => 54.1234, "radius" => 1},
@@ -643,6 +652,12 @@ defmodule ValueFormattersTest do
                  :error,
                  "Unsupported format The type of value [%{\"foo\" => \"bar\"}, %{\"bar\" => \"foo\"}, %{\"baz\" => \"qux\"}] is not supported."
                }
+    end
+
+    test "doesn't format an array with only one map" do
+      assert ValueFormatters.to_string([123, 456, %{"foo" => "bar"}], %{}, @opts) ==
+               {:error,
+                "Unsupported format The type of value [123, 456, %{\"foo\" => \"bar\"}] is not supported."}
     end
   end
 
