@@ -84,15 +84,35 @@ defmodule ValueFormatters do
 
   defp determine_value_type(value) do
     case value do
-      %Date{} -> "date"
-      %DateTime{} -> "date"
-      %NaiveDateTime{} -> "date"
-      %Time{} -> "date"
-      [_lat, _lng, _radius] -> "coordinates"
-      [_lat, _lng] -> "coordinates"
-      %{"lat" => _lat, "lng" => _lng, "radius" => _radius} -> "coordinates"
-      %{"lat" => _lat, "lng" => _lng} -> "coordinates"
-      _ -> "The type of value #{inspect(value)} is not supported."
+      %Date{} ->
+        "date"
+
+      %DateTime{} ->
+        "date"
+
+      %NaiveDateTime{} ->
+        "date"
+
+      %Time{} ->
+        "date"
+
+      [lat, lng, radius]
+      when (is_number(lat) or is_binary(lat)) and
+             (is_number(lng) or is_binary(lng)) and (is_number(radius) or is_binary(radius)) ->
+        "coordinates"
+
+      [lat, lng]
+      when (is_number(lat) or is_binary(lat)) and (is_number(lng) or is_binary(lng)) ->
+        "coordinates"
+
+      %{"lat" => _lat, "lng" => _lng, "radius" => _radius} ->
+        "coordinates"
+
+      %{"lat" => _lat, "lng" => _lng} ->
+        "coordinates"
+
+      _ ->
+        "The type of value #{inspect(value)} is not supported."
     end
   end
 

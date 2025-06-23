@@ -554,6 +554,24 @@ defmodule ValueFormattersTest do
                {:ok, "123.1345°, 34.123°, 2 m"}
     end
 
+    test "full coordinates as string" do
+      assert ValueFormatters.to_string(
+               ["123.1345", "34.123", "2"],
+               %{"format" => "coordinates"},
+               @opts
+             ) ==
+               {:ok, "123.1345°, 34.123°, 2 m"}
+    end
+
+    test "mixed coordinates with radius" do
+      assert ValueFormatters.to_string(
+               [123.1345, "34.123", 2],
+               %{"format" => "coordinates"},
+               @opts
+             ) ==
+               {:ok, "123.1345°, 34.123°, 2 m"}
+    end
+
     test "inference object with radius" do
       assert ValueFormatters.to_string(
                %{"lat" => 43.1298, "lng" => 54.1234, "radius" => 1},
@@ -575,6 +593,11 @@ defmodule ValueFormattersTest do
 
     test "inference list no radius" do
       assert ValueFormatters.to_string([123.1345, 34.123], %{}, @opts) ==
+               {:ok, "123.1345°, 34.123°"}
+    end
+
+    test "inference list as string" do
+      assert ValueFormatters.to_string(["123.1345", "34.123"], %{}, @opts) ==
                {:ok, "123.1345°, 34.123°"}
     end
 
@@ -606,8 +629,36 @@ defmodule ValueFormattersTest do
     end
   end
 
-  test "call with empty object format desription" do
+  test "call with empty object format description" do
     assert ValueFormatters.to_string(3.14244453, %{"precision" => 2}, @opts) == {:ok, "3.14"}
+  end
+
+  describe "array" do
+    test "doesn't format an arrays of maps with 2 elements" do
+      assert ValueFormatters.to_string([%{"foo" => "bar"}, %{"bar" => "foo"}], %{}, @opts) ==
+               {
+                 :error,
+                 "Unsupported format The type of value [%{\"foo\" => \"bar\"}, %{\"bar\" => \"foo\"}] is not supported."
+               }
+    end
+
+    test "doesn't format an arrays of maps with 3 elements" do
+      assert ValueFormatters.to_string(
+               [%{"foo" => "bar"}, %{"bar" => "foo"}, %{"baz" => "qux"}],
+               %{},
+               @opts
+             ) ==
+               {
+                 :error,
+                 "Unsupported format The type of value [%{\"foo\" => \"bar\"}, %{\"bar\" => \"foo\"}, %{\"baz\" => \"qux\"}] is not supported."
+               }
+    end
+
+    test "doesn't format an array with only one map" do
+      assert ValueFormatters.to_string([123, 456, %{"foo" => "bar"}], %{}, @opts) ==
+               {:error,
+                "Unsupported format The type of value [123, 456, %{\"foo\" => \"bar\"}] is not supported."}
+    end
   end
 
   describe "render" do
