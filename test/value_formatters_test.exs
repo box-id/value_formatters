@@ -555,7 +555,11 @@ defmodule ValueFormattersTest do
     end
 
     test "full coordinates as string" do
-      assert ValueFormatters.to_string("123.1345, 34.123, 2", %{"format" => "coordinates"}, @opts) ==
+      assert ValueFormatters.to_string(
+               ["123.1345", "34.123", "2"],
+               %{"format" => "coordinates"},
+               @opts
+             ) ==
                {:ok, "123.1345°, 34.123°, 2 m"}
     end
 
