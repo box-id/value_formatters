@@ -32,7 +32,8 @@ defmodule ValueFormatters.MixProject do
       {:mox, "~> 1.0", only: [:dev, :test]},
       {:timex, "~> 3.7", only: :test},
       {:ok, "~> 2.3.0"},
-      {:mix_test_watch, "~> 1.3", only: [:dev, :test]}
+      {:mix_test_watch, "~> 1.3", only: [:dev, :test]},
+      {:jsv, "~> 0.10", optional: true}
     ]
   end
 
