@@ -1,6 +1,6 @@
 defmodule ValueFormatters.Schemas do
   if Code.ensure_loaded?(JSV) do
-    def format do
+    def format() do
       %{
         type: :object,
         description: "Formats for value formatting",
@@ -19,7 +19,131 @@ defmodule ValueFormatters.Schemas do
                 "coordinates"
               ]
             },
-            available_formats_schema()
+            %{
+              type: :object,
+              properties: %{
+                format: %{
+                  const: "string",
+                  description:
+                    "Use to explicitly disable any kind of formatting that would otherwise take place."
+                }
+              }
+            },
+            %{
+              type: :object,
+              properties: %{
+                format: %{
+                  const: "number",
+                  description:
+                    "Use  to display numeric values and format them according to the user's locale."
+                },
+                precision: %{type: :number, description: "Number of decimal places"},
+                unit: %{
+                  type: :string,
+                  description: "If set, the formatter appends ' ' + unit to the display value"
+                }
+              }
+            },
+            %{
+              type: :object,
+              properties: %{
+                format: %{
+                  const: "date",
+                  description:
+                    "Use to display date-time values and format them according to the user's locale."
+                },
+                date_display: %{
+                  type: :string,
+                  description: """
+                  How the formatter should display the date portion:
+
+                  - `full`: Wednesday, November 29, 2023
+
+                  - `long`: November 29, 2023
+
+                  - `medium`: Nov 29, 2023
+
+                  - `short`: 11/29/23
+
+                  - `none`: Don't display date
+                  """,
+                  enum: ["full", "long", "medium", "short", "none"],
+                  default: "medium"
+                },
+                time_display: %{
+                  type: :string,
+                  description: """
+                  How the formatter should display the time portion:
+
+                  - `full`: 3:44:28 PM GMT
+
+                  - `long`: 3:44:28 PM UTC
+
+                  - `medium`: 3:44:28 PM
+
+                  - `short`: 3:44 PM
+
+                  - `none`: Don't display time
+                  """,
+                  enum: ["full", "long", "medium", "short", "none"],
+                  default: "medium"
+                }
+              }
+            },
+            %{
+              type: :object,
+              properties: %{
+                format: %{
+                  const: "date_relative",
+                  description: """
+                  Use format: "date_relative" to display a relative date string (e.g. “2 days ago”) by comparing the given value against the current date & time. Only the largest sensible unit is displayed, e.g. the formatter will only display “days” even when other components such as hours, minutes etc. aren't equal to zero.
+
+                  The implementation can choose to update the displayed value in appropriate intervals. Also, it can choose to display the absolute date on user interaction, e.g. in a tooltip.
+
+                  This format currently doesn't support any options.
+                  """
+                }
+              }
+            },
+            %{
+              type: :object,
+              properties: %{
+                format: %{
+                  const: "date_iso",
+                  description: "Use to display date-time values in ISO 8601 extended format."
+                }
+              }
+            },
+            %{
+              type: :object,
+              properties: %{
+                format: %{
+                  const: "date_unix",
+                  description: "Use to display date-time values in seconds since unix epoch."
+                },
+                milliseconds: %{
+                  type: :boolean,
+                  default: false,
+                  description:
+                    "Whether the formatter should output the values milliseconds (instead of seconds)."
+                }
+              }
+            },
+            %{
+              type: :object,
+              properties: %{
+                format: %{
+                  const: "coordinate",
+                  description: "Use to display latitude & longitude information."
+                },
+                radius_display: %{
+                  type: :boolean,
+                  default: true,
+                  description:
+                    "Whether the formatter should include the radius/accuracy information (if present)."
+                }
+              }
+            }
           ]
         }
       }
@@ -29,110 +153,106 @@ defmodule ValueFormatters.Schemas do
       %{
         type: :object,
         description: "Default formats for value formatting",
-        properties: available_formats_schema()
-      }
-    end
-
-    defp available_formats_schema() do
-      %{
-        number: %{
-          type: :object,
-          description:
-            "Use  to display numeric values and format them according to the user's locale.",
-          properties: %{
-            precision: %{type: :number, description: "Number of decimal places"},
-            unit: %{
-              type: :string,
-              description: "If set, the formatter appends ' ' + unit to the display value"
+        properties: %{
+          number: %{
+            type: :object,
+            description:
+              "Use  to display numeric values and format them according to the user's locale.",
+            properties: %{
+              precision: %{type: :number, description: "Number of decimal places"},
+              unit: %{
+                type: :string,
+                description: "If set, the formatter appends ' ' + unit to the display value"
+              }
             }
-          }
-        },
-        string: %{
-          type: :object,
-          description:
-            "Use to explicitly disable any kind of formatting that would otherwise take place.",
-          properties: %{}
-        },
-        date: %{
-          type: :object,
-          description:
-            "Use to to display date-time values and format them according to the user's locale.",
-          properties: %{
-            date_display: %{
-              type: :string,
-              description: """
-              How the formatter should display the date portion:
+          },
+          string: %{
+            type: :object,
+            description:
+              "Use to explicitly disable any kind of formatting that would otherwise take place.",
+            properties: %{}
+          },
+          date: %{
+            type: :object,
+            description:
+              "Use to to display date-time values and format them according to the user's locale.",
+            properties: %{
+              date_display: %{
+                type: :string,
+                description: """
+                How the formatter should display the date portion:
 
-              - `full`: Wednesday, November 29, 2023
+                - `full`: Wednesday, November 29, 2023
 
-              - `long`: November 29, 2023
+                - `long`: November 29, 2023
 
-              - `medium`: Nov 29, 2023
+                - `medium`: Nov 29, 2023
 
-              - `short`: 11/29/23
+                - `short`: 11/29/23
 
-              - `none`: Don't display date
-              """,
-              enum: ["full", "long", "medium", "short", "none"],
-              default: "medium"
-            },
-            time_display: %{
-              type: :string,
-              description: """
-              How the formatter should display the time portion:
+                - `none`: Don't display date
+                """,
+                enum: ["full", "long", "medium", "short", "none"],
+                default: "medium"
+              },
+              time_display: %{
+                type: :string,
+                description: """
+                How the formatter should display the time portion:
 
-              - `full`: 3:44:28 PM GMT
+                - `full`: 3:44:28 PM GMT
 
-              - `long`: 3:44:28 PM UTC
+                - `long`: 3:44:28 PM UTC
 
-              - `medium`: 3:44:28 PM
+                - `medium`: 3:44:28 PM
 
-              - `short`: 3:44 PM
+                - `short`: 3:44 PM
 
-              - `none`: Don't display time
-              """,
-              enum: ["full", "long", "medium", "short", "none"],
-              default: "medium"
+                - `none`: Don't display time
+                """,
+                enum: ["full", "long", "medium", "short", "none"],
+                default: "medium"
+              }
             }
-          }
-        },
-        date_relative: %{
-          type: :object,
-          description: """
-          Use format: "date_relative" to display a relative date string (e.g. “2 days ago”) by comparing the given value against the current date & time. Only the largest sensible unit is displayed, e.g. the formatter will only display “days” even when other components such as hours, minutes etc. aren't equal to zero.
+          },
+          date_relative: %{
+            type: :object,
+            description: """
+            Use format: "date_relative" to display a relative date string (e.g. “2 days ago”) by comparing the given value against the current date & time. Only the largest sensible unit is displayed, e.g. the formatter will only display “days” even when other components such as hours, minutes etc. aren't equal to zero.
 
-          The implementation can choose to update the displayed value in appropriate intervals. Also, it can choose to display the absolute date on user interaction, e.g. in a tooltip.
+            The implementation can choose to update the displayed value in appropriate intervals. Also, it can choose to display the absolute date on user interaction, e.g. in a tooltip.
 
-          This format currently doesn't support any options.
-          """,
-          properties: %{}
-        },
-        date_iso: %{
-          type: :object,
-          description: "Use to display date-time values in ISO 8601 extended format.",
-          properties: %{}
-        },
-        date_unix: %{
-          type: :object,
-          description: "Use to display date-time values in seconds since unix epoch.",
-          properties: %{
-            milliseconds: %{
-              type: :boolean,
-              default: false,
-              description:
-                "Whether the formatter should output the values milliseconds (instead of seconds)."
+            This format currently doesn't support any options.
+            """,
+            properties: %{}
+          },
+          date_iso: %{
+            type: :object,
+            description: "Use to display date-time values in ISO 8601 extended format.",
+            properties: %{}
+          },
+          date_unix: %{
+            type: :object,
+            description: "Use to display date-time values in seconds since unix epoch.",
+            properties: %{
+              milliseconds: %{
+                type: :boolean,
+                default: false,
+                description:
+                  "Whether the formatter should output the values milliseconds (instead of seconds)."
+              }
             }
-          }
-        },
-        coordinates: %{
-          type: :object,
-          description: "Use to display latitude & longitude information.",
-          properties: %{
-            radius_display: %{
-              type: :boolean,
-              default: true,
-              description:
-                "Whether the formatter should include the radius/accuracy information (if present)."
+          },
+          coordinates: %{
+            type: :object,
+            description: "Use to display latitude & longitude information.",
+            properties: %{
+              radius_display: %{
+                type: :boolean,
+                default: true,
+                description:
+                  "Whether the formatter should include the radius/accuracy information (if present)."
+              }
             }
           }
         }
