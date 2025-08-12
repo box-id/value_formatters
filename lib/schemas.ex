@@ -6,6 +6,7 @@ defmodule ValueFormatters.Schemas.Format do
       oneOf: [
         %{
           type: :string,
+          title: "shorthand",
           description: "A shorthand representation of the format",
           enum: [
             "number",
