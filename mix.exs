@@ -4,7 +4,7 @@ defmodule ValueFormatters.MixProject do
   def project do
     [
       app: :value_formatters,
-      version: "0.1.3",
+      version: "0.2.0",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -32,7 +32,8 @@ defmodule ValueFormatters.MixProject do
       {:mox, "~> 1.0", only: [:dev, :test]},
       {:timex, "~> 3.7", only: :test},
       {:ok, "~> 2.3.0"},
-      {:mix_test_watch, "~> 1.3", only: [:dev, :test]}
+      {:mix_test_watch, "~> 1.3", only: [:dev, :test]},
+      {:jsv, "~> 0.10", optional: true}
     ]
   end
 

@@ -195,7 +195,7 @@ defmodule ValueFormatters do
     value <> separator <> render_function.(unit)
   end
 
-  defp format_string(value, _string_definition), do: {:ok, value}
+  defp format_string(value, _string_definition), do: {:ok, to_string(value)}
 
   defp format_date(value, date_definition, opts) do
     with {:ok, value} <- pre_process_date_value(value, date_definition, opts) do
