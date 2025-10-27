@@ -6,7 +6,7 @@ defmodule ValueFormatters.Schemas do
         description: "Number of decimal places"
       },
       unit: %{
-        type: :string,
+        type: [:string, :null],
         description: "If set, the formatter appends ' ' + unit to the display value"
       }
     }
@@ -84,7 +84,7 @@ defmodule ValueFormatters.Schemas.Format do
       description: "Formats for value formatting",
       oneOf: [
         %{
-          const: nil,
+          type: :null,
           description: "Skip formatting and return raw value."
         },
         %{
@@ -109,6 +109,11 @@ defmodule ValueFormatters.Schemas.Format do
               const: "string",
               description:
                 "Use to explicitly disable any kind of formatting that would otherwise take place, but still return a string."
+            },
+            field: %{
+              type: :string,
+              description:
+                "If the value is an object, the field to extract the formattable entity from."
             }
           },
           required: [:format],
@@ -124,6 +129,11 @@ defmodule ValueFormatters.Schemas.Format do
                   const: "number",
                   description:
                     "Use to display numeric values and format them according to the user's locale."
+                },
+                field: %{
+                  type: :string,
+                  description:
+                    "If the value is an object, the field to extract the formattable entity from."
                 }
               },
               number_options()
@@ -141,6 +151,11 @@ defmodule ValueFormatters.Schemas.Format do
                   const: "date",
                   description:
                     "Use to display date-time values and format them according to the user's locale."
+                },
+                field: %{
+                  type: :string,
+                  description:
+                    "If the value is an object, the field to extract the formattable entity from."
                 }
               },
               date_options()
@@ -161,6 +176,11 @@ defmodule ValueFormatters.Schemas.Format do
 
               This format currently doesn't support any options.
               """
+            },
+            field: %{
+              type: :string,
+              description:
+                "If the value is an object, the field to extract the formattable entity from."
             }
           },
           required: [:format],
@@ -173,6 +193,11 @@ defmodule ValueFormatters.Schemas.Format do
             format: %{
               const: "date_iso",
               description: "Use to display date-time values in ISO 8601 extended format."
+            },
+            field: %{
+              type: :string,
+              description:
+                "If the value is an object, the field to extract the formattable entity from."
             }
           },
           required: [:format],
@@ -187,6 +212,11 @@ defmodule ValueFormatters.Schemas.Format do
                 format: %{
                   const: "date_unix",
                   description: "Use to display date-time values in seconds since unix epoch."
+                },
+                field: %{
+                  type: :string,
+                  description:
+                    "If the value is an object, the field to extract the formattable entity from."
                 }
               },
               date_unix_options()
@@ -203,11 +233,29 @@ defmodule ValueFormatters.Schemas.Format do
                 format: %{
                   const: "coordinates",
                   description: "Use to display latitude & longitude information."
+                },
+                field: %{
+                  type: :string,
+                  description:
+                    "If the value is an object, the field to extract the formattable entity from."
                 }
               },
               coordinates_options()
             ),
           required: [:format],
+          additionalProperties: false
+        },
+        %{
+          type: "object",
+          title: "field",
+          properties: %{
+            field: %{
+              type: :string,
+              description:
+                "If the value is an object, the field to extract the formattable entity from."
+            }
+          },
+          required: [:field],
           additionalProperties: false
         }
       ]
