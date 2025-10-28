@@ -16,5 +16,11 @@ Unreleased changes will be displayed here upon implementation.
 - [JSV](https://hexdocs.pm/jsv/JSV.html)-compatible JsonSchema definitions for `format` and `defaults` as
   `ValueFormatter.Schema.Format` and `ValueFormatter.Schema.DefaultFormats`, respectively.
 
-[unreleased]: https://github.com/box-id/value_formatters/compare/0.2.0...HEAD
-[0.2.0]: https://github.com/box-id/value_formatters/releases/tag/0.2.0
+## [0.2.1] - 2025-10-28
+
+### Fixed
+
+- Minor documentation fixes and improvements.
+
+[unreleased]: https://github.com/box-id/value_formatters/compare/0.2.1...HEAD
+[0.2.1]: https://github.com/box-id/value_formatters/releases/tag/0.2.1
