@@ -366,6 +366,7 @@ defmodule ValueFormatters do
          {:ok, lng_formatted} <-
            format_number(lng, %{"format" => "number", "precision" => 5}, opts) do
       separator = get_in(coordinate_definition, ["separator"]) || ", "
+
       if get_in(coordinate_definition, ["radius_display"]) != false and radius != nil do
         with {:ok, radius_formatted} <-
                format_number(
@@ -373,7 +374,8 @@ defmodule ValueFormatters do
                  %{"format" => "number", "precision" => 0, "unit" => "m"},
                  opts
                ) do
-          {:ok, "#{lat_formatted}\u{00B0}#{separator}#{lng_formatted}\u{00B0}#{separator}#{radius_formatted}"}
+          {:ok,
+           "#{lat_formatted}\u{00B0}#{separator}#{lng_formatted}\u{00B0}#{separator}#{radius_formatted}"}
         else
           {:error, reason} -> {:error, reason}
         end

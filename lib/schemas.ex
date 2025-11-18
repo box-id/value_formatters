@@ -76,8 +76,8 @@ defmodule ValueFormatters.Schemas do
         type: :string,
         default: ", ",
         description: "The string used to separate latitude, longitude and radius values."
+      }
     }
-  }
   end
 end
 
@@ -119,7 +119,7 @@ defmodule ValueFormatters.Schemas.Format do
               type: :string,
               description:
                 "If the value is an object, the field to extract the formattable entity from."
-            },
+            }
           },
           required: [:format],
           additionalProperties: false
@@ -243,7 +243,7 @@ defmodule ValueFormatters.Schemas.Format do
                   type: :string,
                   description:
                     "If the value is an object, the field to extract the formattable entity from."
-                },
+                }
               },
               coordinates_options()
             ),
@@ -258,8 +258,7 @@ defmodule ValueFormatters.Schemas.Format do
               type: :string,
               description:
                 "If the value is an object, the field to extract the formattable entity from."
-            },
-
+            }
           },
           required: [:field],
           additionalProperties: true
