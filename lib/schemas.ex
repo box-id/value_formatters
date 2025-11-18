@@ -71,6 +71,11 @@ defmodule ValueFormatters.Schemas do
         default: true,
         description:
           "Whether the formatter should include the radius/accuracy information (if present)."
+      },
+      separator: %{
+        type: :string,
+        default: ", ",
+        description: "The string used to separate latitude, longitude and radius values."
       }
     }
   end
@@ -256,7 +261,7 @@ defmodule ValueFormatters.Schemas.Format do
             }
           },
           required: [:field],
-          additionalProperties: false
+          additionalProperties: true
         }
       ]
     }
