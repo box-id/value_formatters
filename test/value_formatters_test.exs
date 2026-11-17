@@ -873,6 +873,24 @@ defmodule ValueFormattersTest do
              ) == {:ok, "51° 58' N, 12° 05' E"}
     end
 
+    test "minutes round half-up at decimal boundaries" do
+      # 12.00025° = 0.015' exactly; float arithmetic would give 0.01499… and round down.
+      assert ValueFormatters.to_string([12.00025, 0], "coordinates_dm", @opts) ==
+               {:ok, "12° 00.02' N, 0° 00.00' E"}
+    end
+
+    test "non-Latin numbering system localizes degrees and minute padding" do
+      assert {:ok, formatted} =
+               ValueFormatters.to_string(
+                 [12.0833, 5.1],
+                 "coordinates_dm",
+                 Keyword.merge(@opts, locale: "fa")
+               )
+
+      assert formatted == "۱۲° ۰۵٫۰۰' N, ۵° ۰۶٫۰۰' E"
+      refute formatted =~ ~r/[0-9]/
+    end
+
     test "values rounding to zero get the positive hemisphere letter" do
       assert ValueFormatters.to_string([-0.000001, -0.000001], "coordinates_dm", @opts) ==
                {:ok, "0° 00.00' N, 0° 00.00' E"}

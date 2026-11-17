@@ -4,7 +4,7 @@ defmodule ValueFormatters.Cldr do
     otp_app: :value_formatters,
     default_locale: "en",
     data_dir: "./priv/cldr",
-    locales: ["de"],
+    locales: ["de", "fa"],
     providers: [
       Cldr.Number,
       Cldr.Calendar,

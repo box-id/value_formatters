@@ -431,29 +431,46 @@ defmodule ValueFormatters do
     end
   end
 
-  # Renders one axis as degrees and decimal minutes, e.g. `51° 58.00' N`.
+  # Renders one axis as degrees and decimal minutes, e.g. `51° 58.00' N`. Uses Decimal arithmetic so
+  # boundaries like 12.00025° (= 0.015') round half-up instead of suffering from float error.
   defp dm_axis(number, positive_letter, negative_letter, precision, opts) do
-    absolute = abs(number) / 1
-    degrees = trunc(absolute)
-    minutes = Float.round((absolute - degrees) * 60, precision)
+    absolute = number |> to_decimal() |> Decimal.abs()
+    degrees = Decimal.round(absolute, 0, :floor)
+
+    minutes =
+      absolute
+      |> Decimal.sub(degrees)
+      |> Decimal.mult(60)
+      |> Decimal.round(precision, :half_up)
 
     # Rounding can push the minutes to 60, which belongs to the next degree.
-    {degrees, minutes} = if minutes >= 60.0, do: {degrees + 1, 0.0}, else: {degrees, minutes}
+    {degrees, minutes} =
+      if Decimal.compare(minutes, 60) == :lt,
+        do: {degrees, minutes},
+        else: {Decimal.add(degrees, 1), Decimal.new(0)}
 
     # Values that display as zero get the positive letter, so float noise never shows `0° 00.00' S`.
-    letter =
-      if number < 0 and (degrees > 0 or minutes > 0), do: negative_letter, else: positive_letter
+    displays_zero? = Decimal.eq?(degrees, 0) and Decimal.eq?(minutes, 0)
+    letter = if number < 0 and not displays_zero?, do: negative_letter, else: positive_letter
 
-    with {:ok, minutes_formatted} <-
-           cldr(opts, Number).to_string(minutes,
-             locale: get_locale(opts),
-             fractional_digits: precision
-           ) do
-      # Zero-pad manually; a custom Cldr pattern like "00.00" would log a precompile warning.
-      minutes_formatted = if minutes < 10, do: "0" <> minutes_formatted, else: minutes_formatted
-      {:ok, "#{degrees}° #{minutes_formatted}' #{letter}"}
+    # Degrees, minutes and the zero padding all go through Cldr so non-Latin numbering systems
+    # never mix scripts. A custom pattern like "00.00" would log a precompile warning instead.
+    number_opts = [locale: get_locale(opts)]
+
+    with {:ok, degrees_formatted} <-
+           cldr(opts, Number).to_string(Decimal.to_integer(degrees), number_opts),
+         {:ok, minutes_formatted} <-
+           cldr(opts, Number).to_string(minutes, [fractional_digits: precision] ++ number_opts),
+         {:ok, zero} <- cldr(opts, Number).to_string(0, number_opts) do
+      minutes_formatted =
+        if Decimal.lt?(minutes, 10), do: zero <> minutes_formatted, else: minutes_formatted
+
+      {:ok, "#{degrees_formatted}° #{minutes_formatted}' #{letter}"}
     end
   end
+
+  defp to_decimal(number) when is_integer(number), do: Decimal.new(number)
+  defp to_decimal(number) when is_float(number), do: Decimal.from_float(number)
 
   defp format_coordinates_link(value, coordinate_definition) do
     template = coordinate_definition["url_template"] || @default_coordinates_url_template
