@@ -17,6 +17,7 @@ defmodule ValueFormatters.SchemasTest do
       assert {:ok, _} = validate_format("coordinates")
       assert {:ok, _} = validate_format("coordinates_plain")
       assert {:ok, _} = validate_format("coordinates_google_maps")
+      assert {:ok, _} = validate_format("coordinates_dm")
     end
 
     test "accepts null shorthand" do
@@ -73,6 +74,15 @@ defmodule ValueFormatters.SchemasTest do
     test "rejects options for coordinates_google_maps" do
       assert {:error, _} =
                validate_format(%{"format" => "coordinates_google_maps", "separator" => ";"})
+    end
+
+    test "accepts coordinates_dm options" do
+      assert {:ok, _} =
+               validate_format(%{
+                 "format" => "coordinates_dm",
+                 "radius_display" => false,
+                 "separator" => " | "
+               })
     end
 
     test "doesn't accept invalid format type" do
@@ -147,6 +157,11 @@ defmodule ValueFormatters.SchemasTest do
 
     test "accepts coordinates_google_maps defaults" do
       assert {:ok, _} = validate_default_formats(%{"coordinates_google_maps" => %{}})
+    end
+
+    test "accepts coordinates_dm defaults" do
+      assert {:ok, _} =
+               validate_default_formats(%{"coordinates_dm" => %{"radius_display" => false}})
     end
 
     test "doesn't accept invalid date options" do

@@ -708,6 +708,47 @@ defmodule ValueFormattersTest do
     end
   end
 
+  describe "coordinates_dm" do
+    test "degrees and decimal minutes" do
+      assert ValueFormatters.to_string([51.9667, 12.0833], "coordinates_dm", @opts) ==
+               {:ok, "51° 58.00' N, 12° 05.00' E"}
+    end
+
+    test "southern and western hemispheres" do
+      assert ValueFormatters.to_string(["-33.8688", "-70.6693"], "coordinates_dm", @opts) ==
+               {:ok, "33° 52.13' S, 70° 40.16' W"}
+    end
+
+    test "German locale" do
+      assert ValueFormatters.to_string(
+               [51.9667, 12.0833],
+               "coordinates_dm",
+               Keyword.merge(@opts, locale: "de")
+             ) == {:ok, "51° 58,00' N, 12° 05,00' E"}
+    end
+
+    test "minutes rounding to 60 carry into degrees" do
+      assert ValueFormatters.to_string([12.99999, 0], "coordinates_dm", @opts) ==
+               {:ok, "13° 00.00' N, 0° 00.00' E"}
+    end
+
+    test "radius shown and hidden, custom separator" do
+      assert ValueFormatters.to_string([51.9667, 12.0833, 2], "coordinates_dm", @opts) ==
+               {:ok, "51° 58.00' N, 12° 05.00' E, 2 m"}
+
+      assert ValueFormatters.to_string(
+               [51.9667, 12.0833, 2],
+               %{"format" => "coordinates_dm", "radius_display" => false, "separator" => " | "},
+               @opts
+             ) == {:ok, "51° 58.00' N | 12° 05.00' E"}
+    end
+
+    test "invalid value returns an error" do
+      assert {:error, "Value " <> _} =
+               ValueFormatters.to_string(%{"foo" => 1}, "coordinates_dm", @opts)
+    end
+  end
+
   test "call with empty object format description" do
     assert ValueFormatters.to_string(3.14244453, %{"precision" => 2}, @opts) == {:ok, "3.14"}
   end

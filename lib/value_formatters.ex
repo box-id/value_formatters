@@ -58,6 +58,9 @@ defmodule ValueFormatters do
       "coordinates_plain" ->
         format_coordinates_plain(value, format_definition)
 
+      "coordinates_dm" ->
+        format_coordinates_dm(value, format_definition, opts)
+
       "coordinates_google_maps" ->
         format_coordinates_google_maps(value)
 
@@ -390,6 +393,46 @@ defmodule ValueFormatters do
     with {:ok, {lat, lng, _radius}} <- parse_coordinates(value) do
       separator = coordinate_definition["separator"] || ", "
       {:ok, plain_decimal(lat) <> separator <> plain_decimal(lng)}
+    end
+  end
+
+  defp format_coordinates_dm(value, coordinate_definition, opts) do
+    with {:ok, {lat, lng, radius}} <- parse_coordinates(value),
+         {:ok, lat_formatted} <- dm_axis(lat, "N", "S", opts),
+         {:ok, lng_formatted} <- dm_axis(lng, "E", "W", opts) do
+      separator = coordinate_definition["separator"] || ", "
+      parts = [lat_formatted, lng_formatted]
+
+      if coordinate_definition["radius_display"] != false and radius != nil do
+        with {:ok, radius_formatted} <-
+               format_number(
+                 radius,
+                 %{"format" => "number", "precision" => 0, "unit" => "m"},
+                 opts
+               ) do
+          {:ok, Enum.join(parts ++ [radius_formatted], separator)}
+        end
+      else
+        {:ok, Enum.join(parts, separator)}
+      end
+    end
+  end
+
+  # Renders one axis as degrees and decimal minutes, e.g. `51° 58.00' N`.
+  defp dm_axis(number, positive_letter, negative_letter, opts) do
+    absolute = abs(number) / 1
+    degrees = trunc(absolute)
+    minutes = Float.round((absolute - degrees) * 60, 2)
+
+    # Rounding can push the minutes to 60, which belongs to the next degree.
+    {degrees, minutes} = if minutes >= 60.0, do: {degrees + 1, 0.0}, else: {degrees, minutes}
+    letter = if number < 0, do: negative_letter, else: positive_letter
+
+    with {:ok, minutes_formatted} <-
+           cldr(opts, Number).to_string(minutes, locale: get_locale(opts), fractional_digits: 2) do
+      # Zero-pad manually; a custom Cldr pattern like "00.00" would log a precompile warning.
+      minutes_formatted = if minutes < 10, do: "0" <> minutes_formatted, else: minutes_formatted
+      {:ok, "#{degrees}° #{minutes_formatted}' #{letter}"}
     end
   end
 

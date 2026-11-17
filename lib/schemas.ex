@@ -115,7 +115,8 @@ defmodule ValueFormatters.Schemas.Format do
             "date_unix",
             "coordinates",
             "coordinates_plain",
-            "coordinates_google_maps"
+            "coordinates_google_maps",
+            "coordinates_dm"
           ]
         },
         %{
@@ -286,6 +287,28 @@ defmodule ValueFormatters.Schemas.Format do
         },
         %{
           type: :object,
+          title: "coordinates_dm",
+          properties:
+            Map.merge(
+              %{
+                format: %{
+                  const: "coordinates_dm",
+                  description:
+                    "Use to display latitude & longitude as degrees and decimal minutes (e.g. `51° 58.00' N, 12° 05.00' E`)."
+                },
+                field: %{
+                  type: :string,
+                  description:
+                    "If the value is an object, the field to extract the formattable entity from."
+                }
+              },
+              coordinates_options()
+            ),
+          required: [:format],
+          additionalProperties: false
+        },
+        %{
+          type: :object,
           title: "coordinates_google_maps",
           properties: %{
             format: %{
@@ -383,6 +406,12 @@ defmodule ValueFormatters.Schemas.DefaultFormats do
           description:
             "Use to display latitude & longitude as plain, locale-independent decimals.",
           properties: coordinates_plain_options(),
+          additionalProperties: false
+        },
+        coordinates_dm: %{
+          type: [:object, :null],
+          description: "Use to display latitude & longitude as degrees and decimal minutes.",
+          properties: coordinates_options(),
           additionalProperties: false
         },
         coordinates_google_maps: %{
