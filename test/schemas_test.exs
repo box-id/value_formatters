@@ -16,7 +16,7 @@ defmodule ValueFormatters.SchemasTest do
       assert {:ok, _} = validate_format("date_iso")
       assert {:ok, _} = validate_format("coordinates")
       assert {:ok, _} = validate_format("coordinates_plain")
-      assert {:ok, _} = validate_format("coordinates_google_maps")
+      assert {:ok, _} = validate_format("coordinates_link")
       assert {:ok, _} = validate_format("coordinates_dm")
     end
 
@@ -71,9 +71,9 @@ defmodule ValueFormatters.SchemasTest do
                validate_format(%{"format" => "coordinates_plain", "radius_display" => true})
     end
 
-    test "rejects options for coordinates_google_maps" do
+    test "rejects options for coordinates_link" do
       assert {:error, _} =
-               validate_format(%{"format" => "coordinates_google_maps", "separator" => ";"})
+               validate_format(%{"format" => "coordinates_link", "separator" => ";"})
     end
 
     test "accepts coordinates_dm options" do
@@ -155,8 +155,8 @@ defmodule ValueFormatters.SchemasTest do
                validate_default_formats(%{"coordinates_plain" => %{"separator" => ";"}})
     end
 
-    test "accepts coordinates_google_maps defaults" do
-      assert {:ok, _} = validate_default_formats(%{"coordinates_google_maps" => %{}})
+    test "accepts coordinates_link defaults" do
+      assert {:ok, _} = validate_default_formats(%{"coordinates_link" => %{}})
     end
 
     test "accepts coordinates_dm defaults" do

@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `coordinates_plain` format: plain, locale-independent decimals without unit or radius, e.g. `51.9667, 12.0833`.
 - `coordinates_dm` format: degrees and decimal minutes, e.g. `51° 58.00' N, 12° 05.00' E`.
-- `coordinates_google_maps` format: a Google Maps link, e.g.
+- `coordinates_link` format: a Google Maps link, e.g.
   `https://www.google.com/maps/search/?api=1&query=51.9667,12.0833`.
 
 ### Fixed

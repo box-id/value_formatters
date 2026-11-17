@@ -635,7 +635,7 @@ defmodule ValueFormattersTest do
     end
 
     test "nil latitude or longitude returns an error in every coordinate format" do
-      for format <- ~w(coordinates coordinates_plain coordinates_dm coordinates_google_maps),
+      for format <- ~w(coordinates coordinates_plain coordinates_dm coordinates_link),
           value <- [%{"lat" => nil, "lng" => nil}, [nil, 1]] do
         assert {:error, "Value " <> _} = ValueFormatters.to_string(value, format, @opts)
       end
@@ -651,7 +651,7 @@ defmodule ValueFormattersTest do
       assert ValueFormatters.to_string([51.9, 12.0, ""], "coordinates_plain", @opts) ==
                {:ok, "51.9, 12"}
 
-      assert ValueFormatters.to_string([51.9, 12.0, ""], "coordinates_google_maps", @opts) ==
+      assert ValueFormatters.to_string([51.9, 12.0, ""], "coordinates_link", @opts) ==
                {:ok, "https://www.google.com/maps/search/?api=1&query=51.9,12"}
 
       assert ValueFormatters.to_string(
@@ -712,11 +712,11 @@ defmodule ValueFormattersTest do
     end
   end
 
-  describe "coordinates_google_maps" do
+  describe "coordinates_link" do
     test "builds a Google Maps link" do
       assert ValueFormatters.to_string(
                [51.9667, 12.0833, 2],
-               "coordinates_google_maps",
+               "coordinates_link",
                Keyword.merge(@opts, locale: "de")
              ) == {:ok, "https://www.google.com/maps/search/?api=1&query=51.9667,12.0833"}
     end
@@ -724,14 +724,14 @@ defmodule ValueFormattersTest do
     test "negative coordinates" do
       assert ValueFormatters.to_string(
                %{"lat" => "-33.8688", "lng" => "-70.6693"},
-               %{"format" => "coordinates_google_maps"},
+               %{"format" => "coordinates_link"},
                @opts
              ) == {:ok, "https://www.google.com/maps/search/?api=1&query=-33.8688,-70.6693"}
     end
 
     test "invalid value returns an error" do
       assert {:error, "Value " <> _} =
-               ValueFormatters.to_string("abc", "coordinates_google_maps", @opts)
+               ValueFormatters.to_string("abc", "coordinates_link", @opts)
     end
   end
 
