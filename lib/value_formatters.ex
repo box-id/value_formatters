@@ -58,6 +58,9 @@ defmodule ValueFormatters do
       "coordinates_plain" ->
         format_coordinates_plain(value, format_definition)
 
+      "coordinates_google_maps" ->
+        format_coordinates_google_maps(value)
+
       _ ->
         {:error, "Unsupported format #{format_definition["format"]}"}
     end
@@ -387,6 +390,13 @@ defmodule ValueFormatters do
     with {:ok, {lat, lng, _radius}} <- parse_coordinates(value) do
       separator = coordinate_definition["separator"] || ", "
       {:ok, plain_decimal(lat) <> separator <> plain_decimal(lng)}
+    end
+  end
+
+  defp format_coordinates_google_maps(value) do
+    with {:ok, {lat, lng, _radius}} <- parse_coordinates(value) do
+      {:ok,
+       "https://www.google.com/maps/search/?api=1&query=#{plain_decimal(lat)},#{plain_decimal(lng)}"}
     end
   end
 

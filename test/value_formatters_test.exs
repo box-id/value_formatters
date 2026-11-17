@@ -685,6 +685,29 @@ defmodule ValueFormattersTest do
     end
   end
 
+  describe "coordinates_google_maps" do
+    test "builds a Google Maps link" do
+      assert ValueFormatters.to_string(
+               [51.9667, 12.0833, 2],
+               "coordinates_google_maps",
+               Keyword.merge(@opts, locale: "de")
+             ) == {:ok, "https://www.google.com/maps/search/?api=1&query=51.9667,12.0833"}
+    end
+
+    test "negative coordinates" do
+      assert ValueFormatters.to_string(
+               %{"lat" => "-33.8688", "lng" => "-70.6693"},
+               %{"format" => "coordinates_google_maps"},
+               @opts
+             ) == {:ok, "https://www.google.com/maps/search/?api=1&query=-33.8688,-70.6693"}
+    end
+
+    test "invalid value returns an error" do
+      assert {:error, "Value " <> _} =
+               ValueFormatters.to_string("abc", "coordinates_google_maps", @opts)
+    end
+  end
+
   test "call with empty object format description" do
     assert ValueFormatters.to_string(3.14244453, %{"precision" => 2}, @opts) == {:ok, "3.14"}
   end

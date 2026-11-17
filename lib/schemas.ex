@@ -114,7 +114,8 @@ defmodule ValueFormatters.Schemas.Format do
             "date_iso",
             "date_unix",
             "coordinates",
-            "coordinates_plain"
+            "coordinates_plain",
+            "coordinates_google_maps"
           ]
         },
         %{
@@ -284,6 +285,23 @@ defmodule ValueFormatters.Schemas.Format do
           additionalProperties: false
         },
         %{
+          type: :object,
+          title: "coordinates_google_maps",
+          properties: %{
+            format: %{
+              const: "coordinates_google_maps",
+              description: "Use to display latitude & longitude as a Google Maps link."
+            },
+            field: %{
+              type: :string,
+              description:
+                "If the value is an object, the field to extract the formattable entity from."
+            }
+          },
+          required: [:format],
+          additionalProperties: false
+        },
+        %{
           type: "object",
           title: "field",
           properties: %{
@@ -365,6 +383,12 @@ defmodule ValueFormatters.Schemas.DefaultFormats do
           description:
             "Use to display latitude & longitude as plain, locale-independent decimals.",
           properties: coordinates_plain_options(),
+          additionalProperties: false
+        },
+        coordinates_google_maps: %{
+          type: [:object, :null],
+          description: "Use to display latitude & longitude as a Google Maps link.",
+          properties: %{},
           additionalProperties: false
         }
       },
