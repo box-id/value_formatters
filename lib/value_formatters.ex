@@ -55,6 +55,9 @@ defmodule ValueFormatters do
       "coordinates" ->
         format_coordinates(value, format_definition, opts)
 
+      "coordinates_plain" ->
+        format_coordinates_plain(value, format_definition)
+
       _ ->
         {:error, "Unsupported format #{format_definition["format"]}"}
     end
@@ -353,15 +356,8 @@ defmodule ValueFormatters do
   end
 
   defp format_coordinates(value, coordinate_definition, opts) do
-    [lat, lng, radius] =
-      case value do
-        %{"lat" => lat, "lng" => lng, "radius" => radius} -> [lat, lng, radius]
-        %{"lat" => lat, "lng" => lng} -> [lat, lng, nil]
-        [lat, lng, radius] -> [lat, lng, radius]
-        [lat, lng] -> [lat, lng, nil]
-      end
-
-    with {:ok, lat_formatted} <-
+    with {:ok, {lat, lng, radius}} <- parse_coordinates(value),
+         {:ok, lat_formatted} <-
            format_number(lat, %{"format" => "number", "precision" => 5}, opts),
          {:ok, lng_formatted} <-
            format_number(lng, %{"format" => "number", "precision" => 5}, opts) do
@@ -383,7 +379,64 @@ defmodule ValueFormatters do
         {:ok, "#{lat_formatted}\u{00B0}#{separator}#{lng_formatted}\u{00B0}"}
       end
     else
-      {:error, _reason} -> {:error, "Value #{value} cannot be parsed as a coordinate"}
+      {:error, _reason} -> coordinate_error(value)
+    end
+  end
+
+  defp format_coordinates_plain(value, coordinate_definition) do
+    with {:ok, {lat, lng, _radius}} <- parse_coordinates(value) do
+      separator = coordinate_definition["separator"] || ", "
+      {:ok, plain_decimal(lat) <> separator <> plain_decimal(lng)}
+    end
+  end
+
+  # Normalizes all supported coordinate inputs to `{lat, lng, radius}`, parsing numeric strings.
+  defp parse_coordinates(value) do
+    components =
+      case value do
+        %{"lat" => lat, "lng" => lng, "radius" => radius} -> [lat, lng, radius]
+        %{"lat" => lat, "lng" => lng} -> [lat, lng, nil]
+        [lat, lng, radius] -> [lat, lng, radius]
+        [lat, lng] -> [lat, lng, nil]
+        _ -> :error
+      end
+
+    with [lat, lng, radius] <- components,
+         {:ok, lat} <- parse_coordinate_number(lat),
+         {:ok, lng} <- parse_coordinate_number(lng),
+         {:ok, radius} <- parse_coordinate_number(radius) do
+      {:ok, {lat, lng, radius}}
+    else
+      _ -> coordinate_error(value)
+    end
+  end
+
+  defp parse_coordinate_number(nil), do: {:ok, nil}
+  defp parse_coordinate_number(number) when is_number(number), do: {:ok, number}
+
+  defp parse_coordinate_number(string) when is_binary(string) do
+    case Float.parse(string) do
+      {number, _remainder} -> {:ok, number}
+      :error -> :error
+    end
+  end
+
+  defp parse_coordinate_number(_other), do: :error
+
+  defp coordinate_error(value),
+    do: {:error, "Value #{inspect(value)} cannot be parsed as a coordinate"}
+
+  # Locale-independent decimal representation with at most 5 fractional digits.
+  defp plain_decimal(number) when is_integer(number), do: Integer.to_string(number)
+
+  defp plain_decimal(number) when is_float(number) do
+    number
+    |> Float.round(5)
+    |> :erlang.float_to_binary([:compact, decimals: 5])
+    |> String.replace_suffix(".0", "")
+    |> case do
+      "-0" -> "0"
+      string -> string
     end
   end
 

@@ -79,6 +79,16 @@ defmodule ValueFormatters.Schemas do
       }
     }
   end
+
+  def coordinates_plain_options do
+    %{
+      separator: %{
+        type: :string,
+        default: ", ",
+        description: "The string used to separate latitude and longitude values."
+      }
+    }
+  end
 end
 
 defmodule ValueFormatters.Schemas.Format do
@@ -103,7 +113,8 @@ defmodule ValueFormatters.Schemas.Format do
             "date_relative",
             "date_iso",
             "date_unix",
-            "coordinates"
+            "coordinates",
+            "coordinates_plain"
           ]
         },
         %{
@@ -251,6 +262,28 @@ defmodule ValueFormatters.Schemas.Format do
           additionalProperties: false
         },
         %{
+          type: :object,
+          title: "coordinates_plain",
+          properties:
+            Map.merge(
+              %{
+                format: %{
+                  const: "coordinates_plain",
+                  description:
+                    "Use to display latitude & longitude as plain, locale-independent decimals (e.g. `51.9667, 12.0833`)."
+                },
+                field: %{
+                  type: :string,
+                  description:
+                    "If the value is an object, the field to extract the formattable entity from."
+                }
+              },
+              coordinates_plain_options()
+            ),
+          required: [:format],
+          additionalProperties: false
+        },
+        %{
           type: "object",
           title: "field",
           properties: %{
@@ -325,6 +358,13 @@ defmodule ValueFormatters.Schemas.DefaultFormats do
           type: [:object, :null],
           description: "Use to display latitude & longitude information.",
           properties: coordinates_options(),
+          additionalProperties: false
+        },
+        coordinates_plain: %{
+          type: [:object, :null],
+          description:
+            "Use to display latitude & longitude as plain, locale-independent decimals.",
+          properties: coordinates_plain_options(),
           additionalProperties: false
         }
       },

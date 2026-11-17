@@ -627,6 +627,62 @@ defmodule ValueFormattersTest do
              ) ==
                {:ok, "123.13457°, 34.12345°"}
     end
+
+    test "invalid values return an error" do
+      for value <- [["x", 1], %{"foo" => 1}] do
+        assert {:error, "Value " <> _} = ValueFormatters.to_string(value, "coordinates", @opts)
+      end
+    end
+  end
+
+  describe "coordinates_plain" do
+    test "plain list" do
+      assert ValueFormatters.to_string([51.9667, 12.0833], "coordinates_plain", @opts) ==
+               {:ok, "51.9667, 12.0833"}
+    end
+
+    test "drops radius" do
+      assert ValueFormatters.to_string(
+               %{"lat" => 51.9667, "lng" => 12.0833, "radius" => 2},
+               %{"format" => "coordinates_plain"},
+               @opts
+             ) == {:ok, "51.9667, 12.0833"}
+    end
+
+    test "ignores locale" do
+      assert ValueFormatters.to_string(
+               [51.9667, 12.0833],
+               "coordinates_plain",
+               Keyword.merge(@opts, locale: "de")
+             ) == {:ok, "51.9667, 12.0833"}
+    end
+
+    test "custom separator" do
+      assert ValueFormatters.to_string(
+               [51.9667, 12.0833],
+               %{"format" => "coordinates_plain", "separator" => ";"},
+               @opts
+             ) == {:ok, "51.9667;12.0833"}
+    end
+
+    test "rounds to 5 digits, negative, strings" do
+      assert ValueFormatters.to_string(["-33.868812345", "151.2093"], "coordinates_plain", @opts) ==
+               {:ok, "-33.86881, 151.2093"}
+    end
+
+    test "whole numbers and tiny values" do
+      assert ValueFormatters.to_string([12, 12.0], "coordinates_plain", @opts) == {:ok, "12, 12"}
+
+      assert ValueFormatters.to_string([0.00001, -0.000004], "coordinates_plain", @opts) ==
+               {:ok, "0.00001, 0"}
+    end
+
+    test "invalid values return an error" do
+      for value <- [5, "abc", %{"foo" => 1}, ["x", 1]] do
+        assert {:error, "Value " <> _} =
+                 ValueFormatters.to_string(value, "coordinates_plain", @opts)
+      end
+    end
   end
 
   test "call with empty object format description" do

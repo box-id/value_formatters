@@ -15,6 +15,7 @@ defmodule ValueFormatters.SchemasTest do
       assert {:ok, _} = validate_format("date_unix")
       assert {:ok, _} = validate_format("date_iso")
       assert {:ok, _} = validate_format("coordinates")
+      assert {:ok, _} = validate_format("coordinates_plain")
     end
 
     test "accepts null shorthand" do
@@ -57,6 +58,15 @@ defmodule ValueFormatters.SchemasTest do
                  "format" => "coordinates",
                  "radius_display" => true
                })
+    end
+
+    test "accepts coordinates_plain options" do
+      assert {:ok, _} = validate_format(%{"format" => "coordinates_plain", "separator" => ";"})
+    end
+
+    test "rejects radius_display for coordinates_plain" do
+      assert {:error, _} =
+               validate_format(%{"format" => "coordinates_plain", "radius_display" => true})
     end
 
     test "doesn't accept invalid format type" do
@@ -122,6 +132,11 @@ defmodule ValueFormatters.SchemasTest do
                    "radius_display" => false
                  }
                })
+    end
+
+    test "accepts coordinates_plain defaults" do
+      assert {:ok, _} =
+               validate_default_formats(%{"coordinates_plain" => %{"separator" => ";"}})
     end
 
     test "doesn't accept invalid date options" do
