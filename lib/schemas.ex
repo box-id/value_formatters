@@ -64,8 +64,14 @@ defmodule ValueFormatters.Schemas do
     }
   end
 
+  defp coordinate_precision_option(default, description) do
+    %{type: :integer, minimum: 0, maximum: 15, default: default, description: description}
+  end
+
   def coordinates_options do
     %{
+      precision:
+        coordinate_precision_option(5, "Number of decimal places for latitude and longitude."),
       radius_display: %{
         type: :boolean,
         default: true,
@@ -82,10 +88,39 @@ defmodule ValueFormatters.Schemas do
 
   def coordinates_plain_options do
     %{
+      precision:
+        coordinate_precision_option(
+          5,
+          "Maximum number of decimal places for latitude and longitude."
+        ),
       separator: %{
         type: :string,
         default: ", ",
         description: "The string used to separate latitude and longitude values."
+      }
+    }
+  end
+
+  def coordinates_dm_options do
+    Map.put(
+      coordinates_options(),
+      :precision,
+      coordinate_precision_option(2, "Number of decimal places for the minutes.")
+    )
+  end
+
+  def coordinates_link_options do
+    %{
+      precision:
+        coordinate_precision_option(
+          5,
+          "Maximum number of decimal places for latitude and longitude."
+        ),
+      url_template: %{
+        type: :string,
+        default: "https://www.google.com/maps/search/?api=1&query={lat},{lng}",
+        description:
+          "URL template; `{lat}` and `{lng}` are replaced with plain, locale-independent decimals."
       }
     }
   end
@@ -302,7 +337,7 @@ defmodule ValueFormatters.Schemas.Format do
                     "If the value is an object, the field to extract the formattable entity from."
                 }
               },
-              coordinates_options()
+              coordinates_dm_options()
             ),
           required: [:format],
           additionalProperties: false
@@ -310,17 +345,22 @@ defmodule ValueFormatters.Schemas.Format do
         %{
           type: :object,
           title: "coordinates_link",
-          properties: %{
-            format: %{
-              const: "coordinates_link",
-              description: "Use to display latitude & longitude as a Google Maps link."
-            },
-            field: %{
-              type: :string,
-              description:
-                "If the value is an object, the field to extract the formattable entity from."
-            }
-          },
+          properties:
+            Map.merge(
+              %{
+                format: %{
+                  const: "coordinates_link",
+                  description:
+                    "Use to display latitude & longitude as a link, by default to Google Maps."
+                },
+                field: %{
+                  type: :string,
+                  description:
+                    "If the value is an object, the field to extract the formattable entity from."
+                }
+              },
+              coordinates_link_options()
+            ),
           required: [:format],
           additionalProperties: false
         },
@@ -411,13 +451,14 @@ defmodule ValueFormatters.Schemas.DefaultFormats do
         coordinates_dm: %{
           type: [:object, :null],
           description: "Use to display latitude & longitude as degrees and decimal minutes.",
-          properties: coordinates_options(),
+          properties: coordinates_dm_options(),
           additionalProperties: false
         },
         coordinates_link: %{
           type: [:object, :null],
-          description: "Use to display latitude & longitude as a Google Maps link.",
-          properties: %{},
+          description:
+            "Use to display latitude & longitude as a link, by default to Google Maps.",
+          properties: coordinates_link_options(),
           additionalProperties: false
         }
       },

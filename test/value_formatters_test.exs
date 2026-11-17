@@ -628,6 +628,14 @@ defmodule ValueFormattersTest do
                {:ok, "123.13457°, 34.12345°"}
     end
 
+    test "custom precision" do
+      assert ValueFormatters.to_string(
+               [51.966712, 12.083312],
+               %{"format" => "coordinates", "precision" => 2},
+               @opts
+             ) == {:ok, "51.97°, 12.08°"}
+    end
+
     test "invalid values return an error" do
       for value <- [["x", 1], %{"foo" => 1}] do
         assert {:error, "Value " <> _} = ValueFormatters.to_string(value, "coordinates", @opts)
@@ -704,6 +712,20 @@ defmodule ValueFormattersTest do
                {:ok, "0.00001, 0"}
     end
 
+    test "custom precision" do
+      assert ValueFormatters.to_string(
+               [51.966712, 12.083312],
+               %{"format" => "coordinates_plain", "precision" => 2},
+               @opts
+             ) == {:ok, "51.97, 12.08"}
+
+      assert ValueFormatters.to_string(
+               [51.966712, 12.083312],
+               %{"format" => "coordinates_plain", "precision" => 0},
+               @opts
+             ) == {:ok, "52, 12"}
+    end
+
     test "invalid values return an error" do
       for value <- [5, "abc", %{"foo" => 1}, ["x", 1]] do
         assert {:error, "Value " <> _} =
@@ -727,6 +749,27 @@ defmodule ValueFormattersTest do
                %{"format" => "coordinates_link"},
                @opts
              ) == {:ok, "https://www.google.com/maps/search/?api=1&query=-33.8688,-70.6693"}
+    end
+
+    test "custom url template" do
+      assert ValueFormatters.to_string(
+               [51.9667, 12.0833],
+               %{
+                 "format" => "coordinates_link",
+                 "url_template" => "https://www.openstreetmap.org/?mlat={lat}&mlon={lng}"
+               },
+               @opts
+             ) == {:ok, "https://www.openstreetmap.org/?mlat=51.9667&mlon=12.0833"}
+    end
+
+    test "url template and precision from defaults" do
+      opts =
+        Keyword.put(@opts, :defaults, %{
+          "coordinates_link" => %{"url_template" => "geo:{lat},{lng}", "precision" => 2}
+        })
+
+      assert ValueFormatters.to_string([51.966712, 12.083312], "coordinates_link", opts) ==
+               {:ok, "geo:51.97,12.08"}
     end
 
     test "invalid value returns an error" do
@@ -768,6 +811,28 @@ defmodule ValueFormattersTest do
                %{"format" => "coordinates_dm", "radius_display" => false, "separator" => " | "},
                @opts
              ) == {:ok, "51° 58.00' N | 12° 05.00' E"}
+    end
+
+    test "custom minutes precision" do
+      assert ValueFormatters.to_string(
+               [51.9667, 12.0833],
+               %{"format" => "coordinates_dm", "precision" => 3},
+               @opts
+             ) == {:ok, "51° 58.002' N, 12° 04.998' E"}
+
+      assert ValueFormatters.to_string(
+               [51.9667, 12.0833],
+               %{"format" => "coordinates_dm", "precision" => 0},
+               @opts
+             ) == {:ok, "51° 58' N, 12° 05' E"}
+    end
+
+    test "minutes carry into degrees with precision 0" do
+      assert ValueFormatters.to_string(
+               [12.995, 0],
+               %{"format" => "coordinates_dm", "precision" => 0},
+               @opts
+             ) == {:ok, "13° 00' N, 0° 00' E"}
     end
 
     test "invalid value returns an error" do

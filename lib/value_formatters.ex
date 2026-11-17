@@ -62,7 +62,7 @@ defmodule ValueFormatters do
         format_coordinates_dm(value, format_definition, opts)
 
       "coordinates_link" ->
-        format_coordinates_link(value)
+        format_coordinates_link(value, format_definition)
 
       _ ->
         {:error, "Unsupported format #{format_definition["format"]}"}
@@ -361,12 +361,19 @@ defmodule ValueFormatters do
     end
   end
 
+  @default_coordinate_precision 5
+  @default_minutes_precision 2
+  @default_coordinates_url_template "https://www.google.com/maps/search/?api=1&query={lat},{lng}"
+
   defp format_coordinates(value, coordinate_definition, opts) do
+    number_definition = %{
+      "format" => "number",
+      "precision" => coordinate_definition["precision"] || @default_coordinate_precision
+    }
+
     with {:ok, {lat, lng, radius}} <- parse_coordinates(value),
-         {:ok, lat_formatted} <-
-           format_number(lat, %{"format" => "number", "precision" => 5}, opts),
-         {:ok, lng_formatted} <-
-           format_number(lng, %{"format" => "number", "precision" => 5}, opts) do
+         {:ok, lat_formatted} <- format_number(lat, number_definition, opts),
+         {:ok, lng_formatted} <- format_number(lng, number_definition, opts) do
       separator = get_in(coordinate_definition, ["separator"]) || ", "
 
       if get_in(coordinate_definition, ["radius_display"]) != false and radius != nil do
@@ -392,14 +399,17 @@ defmodule ValueFormatters do
   defp format_coordinates_plain(value, coordinate_definition) do
     with {:ok, {lat, lng, _radius}} <- parse_coordinates(value) do
       separator = coordinate_definition["separator"] || ", "
-      {:ok, plain_decimal(lat) <> separator <> plain_decimal(lng)}
+      precision = coordinate_definition["precision"] || @default_coordinate_precision
+      {:ok, plain_decimal(lat, precision) <> separator <> plain_decimal(lng, precision)}
     end
   end
 
   defp format_coordinates_dm(value, coordinate_definition, opts) do
+    precision = coordinate_definition["precision"] || @default_minutes_precision
+
     with {:ok, {lat, lng, radius}} <- parse_coordinates(value),
-         {:ok, lat_formatted} <- dm_axis(lat, "N", "S", opts),
-         {:ok, lng_formatted} <- dm_axis(lng, "E", "W", opts) do
+         {:ok, lat_formatted} <- dm_axis(lat, "N", "S", precision, opts),
+         {:ok, lng_formatted} <- dm_axis(lng, "E", "W", precision, opts) do
       separator = coordinate_definition["separator"] || ", "
       parts = [lat_formatted, lng_formatted]
 
@@ -419,27 +429,35 @@ defmodule ValueFormatters do
   end
 
   # Renders one axis as degrees and decimal minutes, e.g. `51° 58.00' N`.
-  defp dm_axis(number, positive_letter, negative_letter, opts) do
+  defp dm_axis(number, positive_letter, negative_letter, precision, opts) do
     absolute = abs(number) / 1
     degrees = trunc(absolute)
-    minutes = Float.round((absolute - degrees) * 60, 2)
+    minutes = Float.round((absolute - degrees) * 60, precision)
 
     # Rounding can push the minutes to 60, which belongs to the next degree.
     {degrees, minutes} = if minutes >= 60.0, do: {degrees + 1, 0.0}, else: {degrees, minutes}
     letter = if number < 0, do: negative_letter, else: positive_letter
 
     with {:ok, minutes_formatted} <-
-           cldr(opts, Number).to_string(minutes, locale: get_locale(opts), fractional_digits: 2) do
+           cldr(opts, Number).to_string(minutes,
+             locale: get_locale(opts),
+             fractional_digits: precision
+           ) do
       # Zero-pad manually; a custom Cldr pattern like "00.00" would log a precompile warning.
       minutes_formatted = if minutes < 10, do: "0" <> minutes_formatted, else: minutes_formatted
       {:ok, "#{degrees}° #{minutes_formatted}' #{letter}"}
     end
   end
 
-  defp format_coordinates_link(value) do
+  defp format_coordinates_link(value, coordinate_definition) do
     with {:ok, {lat, lng, _radius}} <- parse_coordinates(value) do
+      precision = coordinate_definition["precision"] || @default_coordinate_precision
+      template = coordinate_definition["url_template"] || @default_coordinates_url_template
+
       {:ok,
-       "https://www.google.com/maps/search/?api=1&query=#{plain_decimal(lat)},#{plain_decimal(lng)}"}
+       template
+       |> String.replace("{lat}", plain_decimal(lat, precision))
+       |> String.replace("{lng}", plain_decimal(lng, precision))}
     end
   end
 
@@ -478,13 +496,13 @@ defmodule ValueFormatters do
   defp coordinate_error(value),
     do: {:error, "Value #{inspect(value)} cannot be parsed as a coordinate"}
 
-  # Locale-independent decimal representation with at most 5 fractional digits.
-  defp plain_decimal(number) when is_integer(number), do: Integer.to_string(number)
+  # Locale-independent decimal representation with at most `precision` fractional digits.
+  defp plain_decimal(number, _precision) when is_integer(number), do: Integer.to_string(number)
 
-  defp plain_decimal(number) when is_float(number) do
+  defp plain_decimal(number, precision) when is_float(number) do
     number
-    |> Float.round(5)
-    |> :erlang.float_to_binary([:compact, decimals: 5])
+    |> Float.round(precision)
+    |> :erlang.float_to_binary([:compact, decimals: precision])
     |> String.replace_suffix(".0", "")
     |> case do
       "-0" -> "0"
