@@ -633,6 +633,33 @@ defmodule ValueFormattersTest do
         assert {:error, "Value " <> _} = ValueFormatters.to_string(value, "coordinates", @opts)
       end
     end
+
+    test "nil latitude or longitude returns an error in every coordinate format" do
+      for format <- ~w(coordinates coordinates_plain coordinates_dm coordinates_google_maps),
+          value <- [%{"lat" => nil, "lng" => nil}, [nil, 1]] do
+        assert {:error, "Value " <> _} = ValueFormatters.to_string(value, format, @opts)
+      end
+    end
+
+    test "unparseable radius is ignored when the radius is not displayed" do
+      assert ValueFormatters.to_string(
+               [51.9667, 12.0833, "abc"],
+               %{"format" => "coordinates", "radius_display" => false},
+               @opts
+             ) == {:ok, "51.9667°, 12.0833°"}
+
+      assert ValueFormatters.to_string([51.9, 12.0, ""], "coordinates_plain", @opts) ==
+               {:ok, "51.9, 12"}
+
+      assert ValueFormatters.to_string([51.9, 12.0, ""], "coordinates_google_maps", @opts) ==
+               {:ok, "https://www.google.com/maps/search/?api=1&query=51.9,12"}
+
+      assert ValueFormatters.to_string(
+               [51.9667, 12.0833, "abc"],
+               %{"format" => "coordinates_dm", "radius_display" => false},
+               @opts
+             ) == {:ok, "51° 58.00' N, 12° 05.00' E"}
+    end
   end
 
   describe "coordinates_plain" do

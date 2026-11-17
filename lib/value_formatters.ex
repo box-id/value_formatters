@@ -443,7 +443,8 @@ defmodule ValueFormatters do
     end
   end
 
-  # Normalizes all supported coordinate inputs to `{lat, lng, radius}`, parsing numeric strings.
+  # Normalizes all supported coordinate inputs to `{lat, lng, radius}`, parsing lat/lng numeric
+  # strings. The radius is passed through as-is and only parsed by formatters that display it.
   defp parse_coordinates(value) do
     components =
       case value do
@@ -456,15 +457,13 @@ defmodule ValueFormatters do
 
     with [lat, lng, radius] <- components,
          {:ok, lat} <- parse_coordinate_number(lat),
-         {:ok, lng} <- parse_coordinate_number(lng),
-         {:ok, radius} <- parse_coordinate_number(radius) do
+         {:ok, lng} <- parse_coordinate_number(lng) do
       {:ok, {lat, lng, radius}}
     else
       _ -> coordinate_error(value)
     end
   end
 
-  defp parse_coordinate_number(nil), do: {:ok, nil}
   defp parse_coordinate_number(number) when is_number(number), do: {:ok, number}
 
   defp parse_coordinate_number(string) when is_binary(string) do
