@@ -173,7 +173,7 @@ defmodule ValueFormatters do
     ~> append_unit(unit, opts)
   end
 
-  defp format_number(value, number_definition, opts) do
+  defp format_number(value, number_definition, opts) when is_binary(value) do
     with {number, _remainder} <- Float.parse(value) do
       format_number(number, number_definition, opts)
     else
@@ -181,13 +181,22 @@ defmodule ValueFormatters do
     end
   end
 
-  defp count_fractional_digits(number) do
-    [_integer_part, fractional_part] =
-      number
-      |> Float.to_string()
-      |> String.split(".")
+  defp format_number(value, _number_definition, _opts),
+    do: {:error, "Can't parse value #{inspect(value)}"}
 
-    String.length(fractional_part)
+  defp count_fractional_digits(number) do
+    case number |> Float.to_string() |> String.split("e") do
+      [decimal] ->
+        [_integer_part, fractional_part] = String.split(decimal, ".")
+        String.length(fractional_part)
+
+      # Scientific notation, e.g. "1.0e-7" or "1.25e20": shift the mantissa's significant
+      # fractional digits by the exponent.
+      [mantissa, exponent] ->
+        [_integer_part, fractional_part] = String.split(mantissa, ".")
+        significant_digits = fractional_part |> String.trim_trailing("0") |> String.length()
+        max(significant_digits - String.to_integer(exponent), 0)
+    end
   end
 
   defp round_float(value, nil), do: value

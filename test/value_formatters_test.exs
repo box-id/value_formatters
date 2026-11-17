@@ -16,6 +16,14 @@ defmodule ValueFormattersTest do
   end
 
   describe "numbers" do
+    test "precision keeps values printed in scientific notation" do
+      assert ValueFormatters.to_string(
+               0.0000001,
+               %{"format" => "number", "precision" => 7},
+               @opts
+             ) == {:ok, "0.0000001"}
+    end
+
     test "format float with units and precision" do
       format_definition = %{
         "format" => "number",
@@ -626,6 +634,21 @@ defmodule ValueFormattersTest do
                @opts
              ) ==
                {:ok, "123.13457°, 34.12345°"}
+    end
+
+    test "custom precision keeps very small values" do
+      assert ValueFormatters.to_string(
+               [0.0000001, 12.5],
+               %{"format" => "coordinates", "precision" => 7},
+               @opts
+             ) == {:ok, "0.0000001°, 12.5°"}
+    end
+
+    test "invalid displayed radius returns an error" do
+      for format <- ~w(coordinates coordinates_dm), radius <- [true, %{}, "bad"] do
+        assert {:error, _} =
+                 ValueFormatters.to_string([51.9667, 12.0833, radius], format, @opts)
+      end
     end
 
     test "custom precision" do
