@@ -552,13 +552,16 @@ defmodule ValueFormatters do
     do: {:error, "Value #{inspect(value)} cannot be parsed as a coordinate"}
 
   # Locale-independent decimal representation with at most `precision` fractional digits.
+  # Rounds the float's shortest decimal representation half-up via Decimal, so high precisions
+  # never expose binary noise (51.9667 stays "51.9667") and boundaries like 12.00025 round up.
   defp plain_decimal(number, _precision) when is_integer(number), do: Integer.to_string(number)
 
   defp plain_decimal(number, precision) when is_float(number) do
     number
-    |> Float.round(precision)
-    |> :erlang.float_to_binary([:compact, decimals: precision])
-    |> String.replace_suffix(".0", "")
+    |> Decimal.from_float()
+    |> Decimal.round(precision, :half_up)
+    |> Decimal.normalize()
+    |> Decimal.to_string(:normal)
     |> case do
       "-0" -> "0"
       string -> string

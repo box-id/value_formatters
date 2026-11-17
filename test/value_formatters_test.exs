@@ -740,6 +740,38 @@ defmodule ValueFormattersTest do
                {:ok, "-33.86881, 151.2093"}
     end
 
+    test "high precision keeps the input's decimal representation" do
+      assert ValueFormatters.to_string(
+               [51.9667, 151.2093],
+               %{"format" => "coordinates_plain", "precision" => 15},
+               @opts
+             ) == {:ok, "51.9667, 151.2093"}
+
+      assert ValueFormatters.to_string(
+               [51.9667, 151.2093],
+               %{
+                 "format" => "coordinates_link",
+                 "precision" => 14,
+                 "url_template" => "geo:{lat},{lng}"
+               },
+               @opts
+             ) == {:ok, "geo:51.9667,151.2093"}
+    end
+
+    test "rounds half-up at decimal boundaries" do
+      assert ValueFormatters.to_string(
+               [12.00025, 0.125],
+               %{"format" => "coordinates_plain", "precision" => 4},
+               @opts
+             ) == {:ok, "12.0003, 0.125"}
+
+      assert ValueFormatters.to_string(
+               [1.005, 0.125],
+               %{"format" => "coordinates_plain", "precision" => 2},
+               @opts
+             ) == {:ok, "1.01, 0.13"}
+    end
+
     test "whole numbers and tiny values" do
       assert ValueFormatters.to_string([12, 12.0], "coordinates_plain", @opts) == {:ok, "12, 12"}
 
