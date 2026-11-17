@@ -375,65 +375,59 @@ defmodule ValueFormatters do
   @default_coordinates_url_template "https://www.google.com/maps/search/?api=1&query={lat},{lng}"
 
   defp format_coordinates(value, coordinate_definition, opts) do
-    number_definition = %{
-      "format" => "number",
-      "precision" => coordinate_definition["precision"] || @default_coordinate_precision
-    }
+    with {:ok, precision} <-
+           coordinate_precision(coordinate_definition, @default_coordinate_precision),
+         {:ok, {lat, lng, radius}} <- parse_coordinates(value),
+         number_definition = %{"format" => "number", "precision" => precision},
+         {:ok, lat_formatted} <- coordinate_number(lat, number_definition, value, opts),
+         {:ok, lng_formatted} <- coordinate_number(lng, number_definition, value, opts) do
+      join_coordinate_parts(
+        ["#{lat_formatted}\u{00B0}", "#{lng_formatted}\u{00B0}"],
+        radius,
+        coordinate_definition,
+        opts
+      )
+    end
+  end
 
-    with {:ok, {lat, lng, radius}} <- parse_coordinates(value),
-         {:ok, lat_formatted} <- format_number(lat, number_definition, opts),
-         {:ok, lng_formatted} <- format_number(lng, number_definition, opts) do
-      separator = get_in(coordinate_definition, ["separator"]) || ", "
-
-      if get_in(coordinate_definition, ["radius_display"]) != false and radius != nil do
-        with {:ok, radius_formatted} <-
-               format_number(
-                 radius,
-                 %{"format" => "number", "precision" => 0, "unit" => "m"},
-                 opts
-               ) do
-          {:ok,
-           "#{lat_formatted}\u{00B0}#{separator}#{lng_formatted}\u{00B0}#{separator}#{radius_formatted}"}
-        else
-          {:error, reason} -> {:error, reason}
-        end
-      else
-        {:ok, "#{lat_formatted}\u{00B0}#{separator}#{lng_formatted}\u{00B0}"}
-      end
-    else
+  # lat/lng are already parsed numbers, so a formatting error is reported as an invalid coordinate.
+  defp coordinate_number(number, number_definition, value, opts) do
+    case format_number(number, number_definition, opts) do
+      {:ok, formatted} -> {:ok, formatted}
       {:error, _reason} -> coordinate_error(value)
     end
   end
 
   defp format_coordinates_plain(value, coordinate_definition) do
-    with {:ok, {lat, lng, _radius}} <- parse_coordinates(value) do
+    with {:ok, precision} <-
+           coordinate_precision(coordinate_definition, @default_coordinate_precision),
+         {:ok, {lat, lng, _radius}} <- parse_coordinates(value) do
       separator = coordinate_definition["separator"] || ", "
-      precision = coordinate_definition["precision"] || @default_coordinate_precision
       {:ok, plain_decimal(lat, precision) <> separator <> plain_decimal(lng, precision)}
     end
   end
 
   defp format_coordinates_dm(value, coordinate_definition, opts) do
-    precision = coordinate_definition["precision"] || @default_minutes_precision
-
-    with {:ok, {lat, lng, radius}} <- parse_coordinates(value),
+    with {:ok, precision} <-
+           coordinate_precision(coordinate_definition, @default_minutes_precision),
+         {:ok, {lat, lng, radius}} <- parse_coordinates(value),
          {:ok, lat_formatted} <- dm_axis(lat, "N", "S", precision, opts),
          {:ok, lng_formatted} <- dm_axis(lng, "E", "W", precision, opts) do
-      separator = coordinate_definition["separator"] || ", "
-      parts = [lat_formatted, lng_formatted]
+      join_coordinate_parts([lat_formatted, lng_formatted], radius, coordinate_definition, opts)
+    end
+  end
 
-      if coordinate_definition["radius_display"] != false and radius != nil do
-        with {:ok, radius_formatted} <-
-               format_number(
-                 radius,
-                 %{"format" => "number", "precision" => 0, "unit" => "m"},
-                 opts
-               ) do
-          {:ok, Enum.join(parts ++ [radius_formatted], separator)}
-        end
-      else
-        {:ok, Enum.join(parts, separator)}
+  # Joins the formatted axes with the separator and appends the radius unless it is hidden.
+  defp join_coordinate_parts(parts, radius, coordinate_definition, opts) do
+    separator = coordinate_definition["separator"] || ", "
+
+    if coordinate_definition["radius_display"] != false and radius != nil do
+      with {:ok, radius_formatted} <-
+             format_number(radius, %{"format" => "number", "precision" => 0, "unit" => "m"}, opts) do
+        {:ok, Enum.join(parts ++ [radius_formatted], separator)}
       end
+    else
+      {:ok, Enum.join(parts, separator)}
     end
   end
 
@@ -445,7 +439,10 @@ defmodule ValueFormatters do
 
     # Rounding can push the minutes to 60, which belongs to the next degree.
     {degrees, minutes} = if minutes >= 60.0, do: {degrees + 1, 0.0}, else: {degrees, minutes}
-    letter = if number < 0, do: negative_letter, else: positive_letter
+
+    # Values that display as zero get the positive letter, so float noise never shows `0° 00.00' S`.
+    letter =
+      if number < 0 and (degrees > 0 or minutes > 0), do: negative_letter, else: positive_letter
 
     with {:ok, minutes_formatted} <-
            cldr(opts, Number).to_string(minutes,
@@ -459,14 +456,46 @@ defmodule ValueFormatters do
   end
 
   defp format_coordinates_link(value, coordinate_definition) do
-    with {:ok, {lat, lng, _radius}} <- parse_coordinates(value) do
-      precision = coordinate_definition["precision"] || @default_coordinate_precision
-      template = coordinate_definition["url_template"] || @default_coordinates_url_template
+    template = coordinate_definition["url_template"] || @default_coordinates_url_template
 
+    with {:ok, precision} <-
+           coordinate_precision(coordinate_definition, @default_coordinate_precision),
+         :ok <- validate_url_template(template),
+         {:ok, {lat, lng, _radius}} <- parse_coordinates(value) do
       {:ok,
-       template
-       |> String.replace("{lat}", plain_decimal(lat, precision))
-       |> String.replace("{lng}", plain_decimal(lng, precision))}
+       String.replace(template, ["{lat}", "{lng}"], fn
+         "{lat}" -> plain_decimal(lat, precision)
+         "{lng}" -> plain_decimal(lng, precision)
+       end)}
+    end
+  end
+
+  defp validate_url_template(template) when is_binary(template) do
+    if String.contains?(template, "{lat}") and String.contains?(template, "{lng}") do
+      :ok
+    else
+      invalid_url_template(template)
+    end
+  end
+
+  defp validate_url_template(template), do: invalid_url_template(template)
+
+  defp invalid_url_template(template),
+    do:
+      {:error,
+       "Invalid url_template #{inspect(template)}: it must contain the placeholders {lat} and {lng}"}
+
+  # Reads the `precision` option; Float.round/2 only accepts integers from 0 to 15.
+  defp coordinate_precision(coordinate_definition, default) do
+    case Map.get(coordinate_definition, "precision", default) do
+      nil ->
+        {:ok, default}
+
+      precision when is_integer(precision) and precision in 0..15 ->
+        {:ok, precision}
+
+      precision ->
+        {:error, "Invalid precision #{inspect(precision)}: expected an integer from 0 to 15"}
     end
   end
 

@@ -636,6 +636,18 @@ defmodule ValueFormattersTest do
                {:ok, "123.13457°, 34.12345°"}
     end
 
+    test "invalid precision returns an error in every coordinate format" do
+      for format <- ~w(coordinates coordinates_plain coordinates_dm coordinates_link),
+          precision <- [20, -1, "2", 2.5] do
+        assert {:error, "Invalid precision " <> _} =
+                 ValueFormatters.to_string(
+                   [51.9667, 12.0833],
+                   %{"format" => format, "precision" => precision},
+                   @opts
+                 )
+      end
+    end
+
     test "custom precision keeps very small values" do
       assert ValueFormatters.to_string(
                [0.0000001, 12.5],
@@ -785,6 +797,17 @@ defmodule ValueFormattersTest do
              ) == {:ok, "https://www.openstreetmap.org/?mlat=51.9667&mlon=12.0833"}
     end
 
+    test "url template without both placeholders returns an error" do
+      for template <- ["https://maps.example/?q={latitude},{longitude}", "geo:{lat}", "geo:{lng}"] do
+        assert {:error, "Invalid url_template " <> _} =
+                 ValueFormatters.to_string(
+                   [51.9667, 12.0833],
+                   %{"format" => "coordinates_link", "url_template" => template},
+                   @opts
+                 )
+      end
+    end
+
     test "url template and precision from defaults" do
       opts =
         Keyword.put(@opts, :defaults, %{
@@ -848,6 +871,11 @@ defmodule ValueFormattersTest do
                %{"format" => "coordinates_dm", "precision" => 0},
                @opts
              ) == {:ok, "51° 58' N, 12° 05' E"}
+    end
+
+    test "values rounding to zero get the positive hemisphere letter" do
+      assert ValueFormatters.to_string([-0.000001, -0.000001], "coordinates_dm", @opts) ==
+               {:ok, "0° 00.00' N, 0° 00.00' E"}
     end
 
     test "minutes carry into degrees with precision 0" do
