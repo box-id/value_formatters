@@ -96,7 +96,9 @@ MyApp.Formatter.to_string([51.96667, 12.08333], "coordinates_link")
 
 ## Formats
 
-Unless stated otherwise, the examples use the `en` locale.
+The examples call `MyApp.Formatter` from [Preset module](#preset-module), so the Cldr backend is set.
+They show only the string inside the `{:ok, string}` result and use the `en` locale unless stated
+otherwise.
 
 ### `number`
 
@@ -106,8 +108,8 @@ Unless stated otherwise, the examples use the `en` locale.
 | `unit`      | –       | Appended after a space. `°` is appended without a space.            |
 
 ```elixir
-to_string(1234.5678, "number")                                   # "1,234.5678"
-to_string(1234.5678, %{"format" => "number", "precision" => 2})  # "1,234.57" ("1.234,57" in de)
+MyApp.Formatter.to_string(1234.5678, "number")                                   # "1,234.5678"
+MyApp.Formatter.to_string(1234.5678, %{"format" => "number", "precision" => 2})  # "1,234.57" ("1.234,57" in de)
 ```
 
 ### `string`
@@ -125,8 +127,8 @@ timestamp in seconds or milliseconds.
 | `time_display` | `medium` | `full`, `long`, `medium`, `short`, `none`      |
 
 ```elixir
-to_string(~U[2023-11-29 15:44:28Z], "date")  # "Nov 29, 2023, 3:44:28 PM"
-to_string(~U[2023-11-29 15:44:28Z],
+MyApp.Formatter.to_string(~U[2023-11-29 15:44:28Z], "date")  # "Nov 29, 2023, 3:44:28 PM"
+MyApp.Formatter.to_string(~U[2023-11-29 15:44:28Z],
   %{"format" => "date", "date_display" => "long", "time_display" => "none"})  # "29. November 2023" (de)
 ```
 
@@ -185,7 +187,7 @@ Notes:
 - **`coordinates_link`** fills `url_template` with plain decimals:
 
   ```elixir
-  to_string([51.96667, 12.08333], %{
+  MyApp.Formatter.to_string([51.96667, 12.08333], %{
     "format" => "coordinates_link",
     "url_template" => "https://www.openstreetmap.org/?mlat={lat}&mlon={lng}",
     "precision" => 3
