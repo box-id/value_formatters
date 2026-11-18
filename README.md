@@ -102,7 +102,7 @@ Unless stated otherwise, the examples use the `en` locale.
 
 | Option      | Default | Description                                                         |
 |-------------|---------|---------------------------------------------------------------------|
-| `precision` | –       | Maximum number of decimal places. Trailing zeros are not added.     |
+| `precision` | –       | Decimal places: a maximum for floats and numeric strings, but a fixed count for integers. Floats may retain a trailing `.0`. |
 | `unit`      | –       | Appended after a space. `°` is appended without a space.            |
 
 ```elixir
@@ -155,8 +155,9 @@ All coordinate formats accept these inputs:
 - `%{"lat" => lat, "lng" => lng}`
 - `%{"lat" => lat, "lng" => lng, "radius" => radius}`
 
-Each value can be a number or a numeric string. A value that can't be parsed returns
-`{:error, "Value ... cannot be parsed as a coordinate"}`.
+Latitude and longitude can be numbers or numeric strings. If either can't be parsed, formatting
+returns `{:error, "Value ... cannot be parsed as a coordinate"}`. The radius is validated only when
+it is displayed; an invalid displayed radius returns `{:error, "Can't parse value ..."}`.
 
 | Format              | Example (`[51.96667, 12.08333, 2]`)                                 | Localized | Radius |
 |---------------------|---------------------------------------------------------------------|-----------|--------|
