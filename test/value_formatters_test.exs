@@ -558,26 +558,26 @@ defmodule ValueFormattersTest do
 
   describe "coordinates" do
     test "full coordinates" do
-      assert ValueFormatters.to_string([123.1345, 34.123, 2], %{"format" => "coordinates"}, @opts) ==
-               {:ok, "123.1345°, 34.123°, 2 m"}
+      assert ValueFormatters.to_string([23.1345, 34.123, 2], %{"format" => "coordinates"}, @opts) ==
+               {:ok, "23.1345°, 34.123°, 2 m"}
     end
 
     test "full coordinates as string" do
       assert ValueFormatters.to_string(
-               ["123.1345", "34.123", "2"],
+               ["23.1345", "34.123", "2"],
                %{"format" => "coordinates"},
                @opts
              ) ==
-               {:ok, "123.1345°, 34.123°, 2 m"}
+               {:ok, "23.1345°, 34.123°, 2 m"}
     end
 
     test "mixed coordinates with radius" do
       assert ValueFormatters.to_string(
-               [123.1345, "34.123", 2],
+               [23.1345, "34.123", 2],
                %{"format" => "coordinates"},
                @opts
              ) ==
-               {:ok, "123.1345°, 34.123°, 2 m"}
+               {:ok, "23.1345°, 34.123°, 2 m"}
     end
 
     test "inference object with radius" do
@@ -595,45 +595,45 @@ defmodule ValueFormattersTest do
     end
 
     test "inference list with radius" do
-      assert ValueFormatters.to_string([123.1345, 34.123, 2], %{}, @opts) ==
-               {:ok, "123.1345°, 34.123°, 2 m"}
+      assert ValueFormatters.to_string([23.1345, 34.123, 2], %{}, @opts) ==
+               {:ok, "23.1345°, 34.123°, 2 m"}
     end
 
     test "inference list no radius" do
-      assert ValueFormatters.to_string([123.1345, 34.123], %{}, @opts) ==
-               {:ok, "123.1345°, 34.123°"}
+      assert ValueFormatters.to_string([23.1345, 34.123], %{}, @opts) ==
+               {:ok, "23.1345°, 34.123°"}
     end
 
     test "inference list as string" do
-      assert ValueFormatters.to_string(["123.1345", "34.123"], %{}, @opts) ==
-               {:ok, "123.1345°, 34.123°"}
+      assert ValueFormatters.to_string(["23.1345", "34.123"], %{}, @opts) ==
+               {:ok, "23.1345°, 34.123°"}
     end
 
     test "with radius show radius" do
       assert ValueFormatters.to_string(
-               %{"lat" => 123.134567, "lng" => 34.12345, "radius" => 2},
+               %{"lat" => 23.134567, "lng" => 34.12345, "radius" => 2},
                %{"format" => "coordinates"},
                @opts
              ) ==
-               {:ok, "123.13457°, 34.12345°, 2 m"}
+               {:ok, "23.13457°, 34.12345°, 2 m"}
     end
 
     test "no radius show radius" do
       assert ValueFormatters.to_string(
-               %{"lat" => 123.134567, "lng" => 34.12345},
+               %{"lat" => 23.134567, "lng" => 34.12345},
                %{"format" => "coordinates", "radius_display" => true},
                @opts
              ) ==
-               {:ok, "123.13457°, 34.12345°"}
+               {:ok, "23.13457°, 34.12345°"}
     end
 
     test "with radius hide radius" do
       assert ValueFormatters.to_string(
-               %{"lat" => 123.134567, "lng" => 34.12345, "radius" => 2},
+               %{"lat" => 23.134567, "lng" => 34.12345, "radius" => 2},
                %{"format" => "coordinates", "radius_display" => false},
                @opts
              ) ==
-               {:ok, "123.13457°, 34.12345°"}
+               {:ok, "23.13457°, 34.12345°"}
     end
 
     test "invalid precision returns an error in every coordinate format" do
@@ -674,6 +674,42 @@ defmodule ValueFormattersTest do
     test "invalid values return an error" do
       for value <- [["x", 1], %{"foo" => 1}] do
         assert {:error, "Value " <> _} = ValueFormatters.to_string(value, "coordinates", @opts)
+      end
+    end
+
+    test "strings with trailing characters return an error in every coordinate format" do
+      for format <- ~w(coordinates coordinates_plain coordinates_dm coordinates_link),
+          value <- [["56.5xyz", "12.1"], ["56.5", "12abc"], %{"lat" => "56.5 N", "lng" => 12.1}] do
+        assert {:error, "Value " <> _} = ValueFormatters.to_string(value, format, @opts)
+      end
+    end
+
+    test "numeric strings with surrounding whitespace are accepted" do
+      assert ValueFormatters.to_string([" 51.9667 ", "12.0833\n"], "coordinates_plain", @opts) ==
+               {:ok, "51.9667, 12.0833"}
+    end
+
+    test "out-of-range latitude or longitude returns an error in every coordinate format" do
+      for format <- ~w(coordinates coordinates_plain coordinates_dm coordinates_link),
+          value <- [[90.1, 0], [-90.1, 0], [0, 180.1], [0, -180.1], ["200", "500"]] do
+        assert {:error, "Value " <> _} = ValueFormatters.to_string(value, format, @opts)
+      end
+    end
+
+    test "latitude and longitude at their bounds are accepted" do
+      assert ValueFormatters.to_string([90, -180], "coordinates_plain", @opts) ==
+               {:ok, "90, -180"}
+
+      assert ValueFormatters.to_string([-90.0, 180.0], "coordinates_plain", @opts) ==
+               {:ok, "-90, 180"}
+    end
+
+    test "locale errors are passed through instead of reported as invalid coordinates" do
+      opts = Keyword.merge(@opts, locale: "xx")
+
+      for format <- ~w(coordinates coordinates_dm) do
+        assert {:error, "The language \"xx\" is invalid"} =
+                 ValueFormatters.to_string([51.9667, 12.0833], format, opts)
       end
     end
 

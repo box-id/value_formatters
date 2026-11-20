@@ -379,22 +379,14 @@ defmodule ValueFormatters do
            coordinate_precision(coordinate_definition, @default_coordinate_precision),
          {:ok, {lat, lng, radius}} <- parse_coordinates(value),
          number_definition = %{"format" => "number", "precision" => precision},
-         {:ok, lat_formatted} <- coordinate_number(lat, number_definition, value, opts),
-         {:ok, lng_formatted} <- coordinate_number(lng, number_definition, value, opts) do
+         {:ok, lat_formatted} <- format_number(lat, number_definition, opts),
+         {:ok, lng_formatted} <- format_number(lng, number_definition, opts) do
       join_coordinate_parts(
         ["#{lat_formatted}\u{00B0}", "#{lng_formatted}\u{00B0}"],
         radius,
         coordinate_definition,
         opts
       )
-    end
-  end
-
-  # lat/lng are already parsed numbers, so a formatting error is reported as an invalid coordinate.
-  defp coordinate_number(number, number_definition, value, opts) do
-    case format_number(number, number_definition, opts) do
-      {:ok, formatted} -> {:ok, formatted}
-      {:error, _reason} -> coordinate_error(value)
     end
   end
 
@@ -517,7 +509,7 @@ defmodule ValueFormatters do
   end
 
   # Normalizes all supported coordinate inputs to `{lat, lng, radius}`, parsing lat/lng numeric
-  # strings. The radius is passed through as-is and only parsed by formatters that display it.
+  # strings and rejecting values outside -90..90 (lat) and -180..180 (lng). The radius is passed through as-is and only parsed by formatters that display it.
   defp parse_coordinates(value) do
     components =
       case value do
@@ -530,7 +522,9 @@ defmodule ValueFormatters do
 
     with [lat, lng, radius] <- components,
          {:ok, lat} <- parse_coordinate_number(lat),
-         {:ok, lng} <- parse_coordinate_number(lng) do
+         {:ok, lng} <- parse_coordinate_number(lng),
+         true <- lat >= -90 and lat <= 90,
+         true <- lng >= -180 and lng <= 180 do
       {:ok, {lat, lng, radius}}
     else
       _ -> coordinate_error(value)
@@ -540,9 +534,10 @@ defmodule ValueFormatters do
   defp parse_coordinate_number(number) when is_number(number), do: {:ok, number}
 
   defp parse_coordinate_number(string) when is_binary(string) do
-    case Float.parse(string) do
-      {number, _remainder} -> {:ok, number}
-      :error -> :error
+    # The whole (trimmed) string must be a number, so e.g. "56.5xyz" is rejected.
+    case string |> String.trim() |> Float.parse() do
+      {number, ""} -> {:ok, number}
+      _ -> :error
     end
   end
 

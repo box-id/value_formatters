@@ -157,8 +157,10 @@ All coordinate formats accept these inputs:
 - `%{"lat" => lat, "lng" => lng}`
 - `%{"lat" => lat, "lng" => lng, "radius" => radius}`
 
-Latitude and longitude can be numbers or numeric strings. If either can't be parsed, formatting
-returns `{:error, "Value ... cannot be parsed as a coordinate"}`. The radius is validated only when
+Latitude and longitude can be numbers or numeric strings (surrounding whitespace is ignored, any
+other trailing characters are not). Latitude must be within -90..90 and longitude within
+-180..180. If either can't be parsed or is out of range, formatting returns
+`{:error, "Value ... cannot be parsed as a coordinate"}`. The radius is validated only when
 it is displayed; an invalid displayed radius returns `{:error, "Can't parse value ..."}`.
 
 | Format              | Example (`[51.96667, 12.08333, 2]`)                                 | Localized | Radius |
