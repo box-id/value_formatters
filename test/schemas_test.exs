@@ -15,6 +15,9 @@ defmodule ValueFormatters.SchemasTest do
       assert {:ok, _} = validate_format("date_unix")
       assert {:ok, _} = validate_format("date_iso")
       assert {:ok, _} = validate_format("coordinates")
+      assert {:ok, _} = validate_format("coordinates_plain")
+      assert {:ok, _} = validate_format("coordinates_link")
+      assert {:ok, _} = validate_format("coordinates_dm")
     end
 
     test "accepts null shorthand" do
@@ -56,6 +59,47 @@ defmodule ValueFormatters.SchemasTest do
                validate_format(%{
                  "format" => "coordinates",
                  "radius_display" => true
+               })
+    end
+
+    test "accepts coordinates_plain options" do
+      assert {:ok, _} = validate_format(%{"format" => "coordinates_plain", "separator" => ";"})
+    end
+
+    test "rejects radius_display for coordinates_plain" do
+      assert {:error, _} =
+               validate_format(%{"format" => "coordinates_plain", "radius_display" => true})
+    end
+
+    test "accepts precision for all coordinate formats" do
+      for format <- ~w(coordinates coordinates_plain coordinates_dm coordinates_link) do
+        assert {:ok, _} = validate_format(%{"format" => format, "precision" => 2})
+      end
+    end
+
+    test "rejects negative precision for coordinates" do
+      assert {:error, _} = validate_format(%{"format" => "coordinates", "precision" => -1})
+    end
+
+    test "accepts url_template for coordinates_link" do
+      assert {:ok, _} =
+               validate_format(%{
+                 "format" => "coordinates_link",
+                 "url_template" => "geo:{lat},{lng}"
+               })
+    end
+
+    test "rejects separator for coordinates_link" do
+      assert {:error, _} =
+               validate_format(%{"format" => "coordinates_link", "separator" => ";"})
+    end
+
+    test "accepts coordinates_dm options" do
+      assert {:ok, _} =
+               validate_format(%{
+                 "format" => "coordinates_dm",
+                 "radius_display" => false,
+                 "separator" => " | "
                })
     end
 
@@ -122,6 +166,25 @@ defmodule ValueFormatters.SchemasTest do
                    "radius_display" => false
                  }
                })
+    end
+
+    test "accepts coordinates_plain defaults" do
+      assert {:ok, _} =
+               validate_default_formats(%{"coordinates_plain" => %{"separator" => ";"}})
+    end
+
+    test "accepts coordinates_link defaults" do
+      assert {:ok, _} = validate_default_formats(%{"coordinates_link" => %{}})
+
+      assert {:ok, _} =
+               validate_default_formats(%{
+                 "coordinates_link" => %{"url_template" => "geo:{lat},{lng}", "precision" => 3}
+               })
+    end
+
+    test "accepts coordinates_dm defaults" do
+      assert {:ok, _} =
+               validate_default_formats(%{"coordinates_dm" => %{"radius_display" => false}})
     end
 
     test "doesn't accept invalid date options" do

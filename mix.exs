@@ -32,6 +32,8 @@ defmodule ValueFormatters.MixProject do
       {:mox, "~> 1.0", only: [:dev, :test]},
       {:timex, "~> 3.7", only: :test},
       {:ok, "~> 2.3.0"},
+      # Also a dependency of ex_cldr, which host applications provide.
+      {:decimal, "~> 2.0"},
       {:mix_test_watch, "~> 1.3", only: [:dev, :test]},
       {:jsv, "~> 0.10", optional: true}
     ]
