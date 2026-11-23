@@ -18,7 +18,7 @@
     },
     {
       "title": "## 🛠️ Other Changes",
-      "labels": ["*"]
+      "labels": []
     }
   ],
   "transformers": [
@@ -28,5 +28,6 @@
     }
   ],
   "template": "#{{CHANGELOG}}**Full Changelog:** #{{RELEASE_DIFF}}",
-  "pr_template": "- #{{TITLE}} [##{{NUMBER}}](#{{URL}})"
+  "pr_template": "- #{{TITLE}} [##{{NUMBER}}](#{{URL}})",
+  "ignore_labels": ["changelog-ignore"]
 }
