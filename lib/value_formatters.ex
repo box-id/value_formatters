@@ -55,6 +55,15 @@ defmodule ValueFormatters do
       "coordinates" ->
         format_coordinates(value, format_definition, opts)
 
+      "coordinates_plain" ->
+        format_coordinates_plain(value, format_definition)
+
+      "coordinates_dm" ->
+        format_coordinates_dm(value, format_definition, opts)
+
+      "coordinates_link" ->
+        format_coordinates_link(value, format_definition)
+
       _ ->
         {:error, "Unsupported format #{format_definition["format"]}"}
     end
@@ -164,7 +173,7 @@ defmodule ValueFormatters do
     ~> append_unit(unit, opts)
   end
 
-  defp format_number(value, number_definition, opts) do
+  defp format_number(value, number_definition, opts) when is_binary(value) do
     with {number, _remainder} <- Float.parse(value) do
       format_number(number, number_definition, opts)
     else
@@ -172,13 +181,22 @@ defmodule ValueFormatters do
     end
   end
 
-  defp count_fractional_digits(number) do
-    [_integer_part, fractional_part] =
-      number
-      |> Float.to_string()
-      |> String.split(".")
+  defp format_number(value, _number_definition, _opts),
+    do: {:error, "Can't parse value #{inspect(value)}"}
 
-    String.length(fractional_part)
+  defp count_fractional_digits(number) do
+    case number |> Float.to_string() |> String.split("e") do
+      [decimal] ->
+        [_integer_part, fractional_part] = String.split(decimal, ".")
+        String.length(fractional_part)
+
+      # Scientific notation, e.g. "1.0e-7" or "1.25e20": shift the mantissa's significant
+      # fractional digits by the exponent.
+      [mantissa, exponent] ->
+        [_integer_part, fractional_part] = String.split(mantissa, ".")
+        significant_digits = fractional_part |> String.trim_trailing("0") |> String.length()
+        max(significant_digits - String.to_integer(exponent), 0)
+    end
   end
 
   defp round_float(value, nil), do: value
@@ -352,38 +370,196 @@ defmodule ValueFormatters do
     end
   end
 
+  @default_coordinate_precision 5
+  @default_minutes_precision 2
+  @default_coordinates_url_template "https://www.google.com/maps/search/?api=1&query={lat},{lng}"
+
   defp format_coordinates(value, coordinate_definition, opts) do
-    [lat, lng, radius] =
+    with {:ok, precision} <-
+           coordinate_precision(coordinate_definition, @default_coordinate_precision),
+         {:ok, {lat, lng, radius}} <- parse_coordinates(value),
+         number_definition = %{"format" => "number", "precision" => precision},
+         {:ok, lat_formatted} <- format_number(lat, number_definition, opts),
+         {:ok, lng_formatted} <- format_number(lng, number_definition, opts) do
+      join_coordinate_parts(
+        ["#{lat_formatted}\u{00B0}", "#{lng_formatted}\u{00B0}"],
+        radius,
+        coordinate_definition,
+        opts
+      )
+    end
+  end
+
+  defp format_coordinates_plain(value, coordinate_definition) do
+    with {:ok, precision} <-
+           coordinate_precision(coordinate_definition, @default_coordinate_precision),
+         {:ok, {lat, lng, _radius}} <- parse_coordinates(value) do
+      separator = coordinate_definition["separator"] || ", "
+      {:ok, plain_decimal(lat, precision) <> separator <> plain_decimal(lng, precision)}
+    end
+  end
+
+  defp format_coordinates_dm(value, coordinate_definition, opts) do
+    with {:ok, precision} <-
+           coordinate_precision(coordinate_definition, @default_minutes_precision),
+         {:ok, {lat, lng, radius}} <- parse_coordinates(value),
+         {:ok, lat_formatted} <- dm_axis(lat, "N", "S", precision, opts),
+         {:ok, lng_formatted} <- dm_axis(lng, "E", "W", precision, opts) do
+      join_coordinate_parts([lat_formatted, lng_formatted], radius, coordinate_definition, opts)
+    end
+  end
+
+  # Joins the formatted axes with the separator and appends the radius unless it is hidden.
+  defp join_coordinate_parts(parts, radius, coordinate_definition, opts) do
+    separator = coordinate_definition["separator"] || ", "
+
+    if coordinate_definition["radius_display"] != false and radius != nil do
+      with {:ok, radius_formatted} <-
+             format_number(radius, %{"format" => "number", "precision" => 0, "unit" => "m"}, opts) do
+        {:ok, Enum.join(parts ++ [radius_formatted], separator)}
+      end
+    else
+      {:ok, Enum.join(parts, separator)}
+    end
+  end
+
+  # Renders one axis as degrees and decimal minutes, e.g. `51° 58.00' N`. Uses Decimal arithmetic so
+  # boundaries like 12.00025° (= 0.015') round half-up instead of suffering from float error.
+  defp dm_axis(number, positive_letter, negative_letter, precision, opts) do
+    absolute = number |> to_decimal() |> Decimal.abs()
+    degrees = Decimal.round(absolute, 0, :floor)
+
+    minutes =
+      absolute
+      |> Decimal.sub(degrees)
+      |> Decimal.mult(60)
+      |> Decimal.round(precision, :half_up)
+
+    # Rounding can push the minutes to 60, which belongs to the next degree.
+    {degrees, minutes} =
+      if Decimal.compare(minutes, 60) == :lt,
+        do: {degrees, minutes},
+        else: {Decimal.add(degrees, 1), Decimal.new(0)}
+
+    # Values that display as zero get the positive letter, so float noise never shows `0° 00.00' S`.
+    displays_zero? = Decimal.eq?(degrees, 0) and Decimal.eq?(minutes, 0)
+    letter = if number < 0 and not displays_zero?, do: negative_letter, else: positive_letter
+
+    # Degrees, minutes and the zero padding all go through Cldr so non-Latin numbering systems
+    # never mix scripts. A custom pattern like "00.00" would log a precompile warning instead.
+    number_opts = [locale: get_locale(opts)]
+
+    with {:ok, degrees_formatted} <-
+           cldr(opts, Number).to_string(Decimal.to_integer(degrees), number_opts),
+         {:ok, minutes_formatted} <-
+           cldr(opts, Number).to_string(minutes, [fractional_digits: precision] ++ number_opts),
+         {:ok, zero} <- cldr(opts, Number).to_string(0, number_opts) do
+      minutes_formatted =
+        if Decimal.lt?(minutes, 10), do: zero <> minutes_formatted, else: minutes_formatted
+
+      {:ok, "#{degrees_formatted}° #{minutes_formatted}' #{letter}"}
+    end
+  end
+
+  defp to_decimal(number) when is_integer(number), do: Decimal.new(number)
+  defp to_decimal(number) when is_float(number), do: Decimal.from_float(number)
+
+  defp format_coordinates_link(value, coordinate_definition) do
+    template = coordinate_definition["url_template"] || @default_coordinates_url_template
+
+    with {:ok, precision} <-
+           coordinate_precision(coordinate_definition, @default_coordinate_precision),
+         :ok <- validate_url_template(template),
+         {:ok, {lat, lng, _radius}} <- parse_coordinates(value) do
+      {:ok,
+       String.replace(template, ["{lat}", "{lng}"], fn
+         "{lat}" -> plain_decimal(lat, precision)
+         "{lng}" -> plain_decimal(lng, precision)
+       end)}
+    end
+  end
+
+  defp validate_url_template(template) when is_binary(template) do
+    if String.contains?(template, "{lat}") and String.contains?(template, "{lng}") do
+      :ok
+    else
+      invalid_url_template(template)
+    end
+  end
+
+  defp validate_url_template(template), do: invalid_url_template(template)
+
+  defp invalid_url_template(template),
+    do:
+      {:error,
+       "Invalid url_template #{inspect(template)}: it must contain the placeholders {lat} and {lng}"}
+
+  # Reads the `precision` option; Float.round/2 only accepts integers from 0 to 15.
+  defp coordinate_precision(coordinate_definition, default) do
+    case Map.get(coordinate_definition, "precision", default) do
+      nil ->
+        {:ok, default}
+
+      precision when is_integer(precision) and precision in 0..15 ->
+        {:ok, precision}
+
+      precision ->
+        {:error, "Invalid precision #{inspect(precision)}: expected an integer from 0 to 15"}
+    end
+  end
+
+  # Normalizes all supported coordinate inputs to `{lat, lng, radius}`, parsing lat/lng numeric
+  # strings and rejecting values outside -90..90 (lat) and -180..180 (lng). The radius is passed through as-is and only parsed by formatters that display it.
+  defp parse_coordinates(value) do
+    components =
       case value do
         %{"lat" => lat, "lng" => lng, "radius" => radius} -> [lat, lng, radius]
         %{"lat" => lat, "lng" => lng} -> [lat, lng, nil]
         [lat, lng, radius] -> [lat, lng, radius]
         [lat, lng] -> [lat, lng, nil]
+        _ -> :error
       end
 
-    with {:ok, lat_formatted} <-
-           format_number(lat, %{"format" => "number", "precision" => 5}, opts),
-         {:ok, lng_formatted} <-
-           format_number(lng, %{"format" => "number", "precision" => 5}, opts) do
-      separator = get_in(coordinate_definition, ["separator"]) || ", "
-
-      if get_in(coordinate_definition, ["radius_display"]) != false and radius != nil do
-        with {:ok, radius_formatted} <-
-               format_number(
-                 radius,
-                 %{"format" => "number", "precision" => 0, "unit" => "m"},
-                 opts
-               ) do
-          {:ok,
-           "#{lat_formatted}\u{00B0}#{separator}#{lng_formatted}\u{00B0}#{separator}#{radius_formatted}"}
-        else
-          {:error, reason} -> {:error, reason}
-        end
-      else
-        {:ok, "#{lat_formatted}\u{00B0}#{separator}#{lng_formatted}\u{00B0}"}
-      end
+    with [lat, lng, radius] <- components,
+         {:ok, lat} <- parse_coordinate_number(lat),
+         {:ok, lng} <- parse_coordinate_number(lng),
+         true <- lat >= -90 and lat <= 90,
+         true <- lng >= -180 and lng <= 180 do
+      {:ok, {lat, lng, radius}}
     else
-      {:error, _reason} -> {:error, "Value #{value} cannot be parsed as a coordinate"}
+      _ -> coordinate_error(value)
+    end
+  end
+
+  defp parse_coordinate_number(number) when is_number(number), do: {:ok, number}
+
+  defp parse_coordinate_number(string) when is_binary(string) do
+    # The whole (trimmed) string must be a number, so e.g. "56.5xyz" is rejected.
+    case string |> String.trim() |> Float.parse() do
+      {number, ""} -> {:ok, number}
+      _ -> :error
+    end
+  end
+
+  defp parse_coordinate_number(_other), do: :error
+
+  defp coordinate_error(value),
+    do: {:error, "Value #{inspect(value)} cannot be parsed as a coordinate"}
+
+  # Locale-independent decimal representation with at most `precision` fractional digits.
+  # Rounds the float's shortest decimal representation half-up via Decimal, so high precisions
+  # never expose binary noise (51.9667 stays "51.9667") and boundaries like 12.00025 round up.
+  defp plain_decimal(number, _precision) when is_integer(number), do: Integer.to_string(number)
+
+  defp plain_decimal(number, precision) when is_float(number) do
+    number
+    |> Decimal.from_float()
+    |> Decimal.round(precision, :half_up)
+    |> Decimal.normalize()
+    |> Decimal.to_string(:normal)
+    |> case do
+      "-0" -> "0"
+      string -> string
     end
   end
 
