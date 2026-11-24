@@ -207,6 +207,11 @@ Use them with [JSV](https://hex.pm/packages/jsv):
 - **`ValueFormatters.Schemas.DefaultFormats.json_schema/0`** validates the `defaults` map, which
   has one key per format.
 
+## Changelog
+
+Release notes are published as [GitHub Releases](https://github.com/box-id/value_formatters/releases).
+`CHANGELOG.md` covers releases up to 0.2.2.
+
 ## Development
 
 ```sh
@@ -217,3 +222,15 @@ mix compile --warnings-as-errors
 ```
 
 Tests use the Cldr backend in `test/cldr.ex`, with locale data in `priv/cldr`.
+
+### Releasing
+
+1. Label every PR before merging. Labels decide the next version and the section in the release notes:
+   `breaking` (major), `improvement` or `deprecation` (minor), `bug` or anything else (patch).
+   `changelog-ignore` leaves a PR out of the notes. Start PR titles with the Jira key (`PD-1234: …`) to
+   get a link.
+2. Run **Actions → 👉 Trigger Version Bump** on `main`. It opens a `Release X.Y.Z` PR that bumps the
+   version in `mix.exs`.
+3. On that PR's branch, update the `tag:` in the [Installation](#installation) snippet by hand.
+4. The PR description becomes the GitHub release notes, so edit it before merging. Merging tags the
+   merge commit and publishes the release.
