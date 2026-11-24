@@ -24,7 +24,7 @@
   "transformers": [
     {
       "pattern": "^([A-Za-z]+-[0-9]+):? (.*)$",
-      "target": "$2 ([$1](https://box-id.atlassian.net/browse/$1))"
+      "target": "$2 ($1)"
     }
   ],
   "template": "#{{CHANGELOG}}**Full Changelog:** #{{RELEASE_DIFF}}",
